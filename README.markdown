@@ -8,3 +8,5 @@ Output ExpressionEngine data in JSON format.
 
 ## json:entries Usage
 	{exp:json:entries channel="news"}
+
+json:entries is a single tag, not a tag pair. Use channel:entries parameters to filter your entries.
