@@ -1,11 +1,11 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 $plugin_info = array(
-	'pi_name' => '',
+	'pi_name' => 'JSON',
 	'pi_version' => '1.0.0',
-	'pi_author' => '',
+	'pi_author' => 'Rob Sanchez',
 	'pi_author_url' => 'http://barrettnewton.com/',
-	'pi_description' => '',
+	'pi_description' => 'Output ExpressionEngine data in JSON format.',
 	'pi_usage' => Json::usage()
 );
 
@@ -121,6 +121,9 @@ class Json
 	{
 		ob_start(); 
 ?>
+{exp:json:entries channel="news"}
+
+{exp:json:entries channel="products" search:product_size="10"}
 <?php
 		$buffer = ob_get_contents();
 		      
