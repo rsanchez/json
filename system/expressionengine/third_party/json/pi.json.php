@@ -12,20 +12,35 @@ $plugin_info = array(
 class Json
 {
 	public $return_data = '';
+	
+	public $entries;
+	public $entries_entry_ids;
+	public $entries_custom_fields;
+	protected $entries_matrix_rows;
+	protected $entries_matrix_cols;
 
 	public function Json()
 	{
 		$this->EE = get_instance();
 	}
 	
+	protected function entries_initialize()
+	{
+		$this->entries = array();
+		$this->entries_entry_ids = array();
+		$this->entries_custom_fields = array();
+		$this->entries_matrix_rows = NULL;
+		//$this->entries_matrix_cols = NULL;
+	}
+	
 	public function entries()
 	{
+		$this->entries_initialize();
+		
 		if ($this->EE->TMPL->fetch_param('xhr') == 'yes' && ! $this->EE->input->is_ajax_request())
 		{
 			return '';
 		}
-		
-		$entries = array();
 		
 		if ($this->EE->TMPL->fetch_param('fields'))
 		{
@@ -34,9 +49,9 @@ class Json
 		
 		if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $this->channel_sql(), $match))
 		{
-			$entry_ids = explode(',', $match[1]);
+			$this->entries_entry_ids = explode(',', $match[1]);
 			
-			$custom_fields = $this->EE->db->select('channel_fields.*, channels.channel_id')
+			$this->entries_custom_fields = $this->EE->db->select('channel_fields.*, channels.channel_id')
 					->from('channel_fields')
 					->join('channels', 'channel_fields.group_id = channels.field_group')
 					->where_in('channels.channel_name', explode('|', $this->EE->TMPL->fetch_param('channel')))
@@ -74,7 +89,7 @@ class Json
 				$select = $default_fields;
 			}
 			
-			foreach ($custom_fields as &$field)
+			foreach ($this->entries_custom_fields as &$field)
 			{
 				if (empty($fields) || in_array($field['field_name'], $fields))
 				{
@@ -82,14 +97,14 @@ class Json
 				}
 			}
 			
-			$entries = $this->EE->db->select(implode(', ', $select), FALSE)
+			$this->entries = $this->EE->db->select(implode(', ', $select), FALSE)
 						->from('channel_titles t')
 						->join('channel_data d', 't.entry_id = d.entry_id')
-						->where_in('t.entry_id', $entry_ids)
+						->where_in('t.entry_id', $this->entries_entry_ids)
 						->get()
 						->result_array();
 			
-			foreach ($entries as &$entry)
+			foreach ($this->entries as &$entry)
 			{
 				if (isset($entry['entry_date']))
 				{
@@ -106,25 +121,39 @@ class Json
 					$entry['expiration_date'] = ($entry['expiration_date']) ? $entry['expiration_date'].'000' : '';
 				}
 				
-				/*
-				foreach ($custom_fields as &$field)
+				foreach ($this->entries_custom_fields as &$field)
 				{
-					$entry[$field['field_name']] = $this->replace_tag($entry, $field, $entry['field_id_'.$field['field_id']]);
+//					$entry[$field['field_name']] = $this->replace_tag($entry, $field, $entry['field_id_'.$field['field_id']]);
 					
-					unset($entry['field_id_'.$field['field_id']]);
+					$func = 'entries_'.$field['field_type'];
+					
+					if (is_callable(array($this, $func)))
+					{
+						$entry[$field['field_name']] = call_user_func(array($this, $func), $entry['entry_id'], $field, $entry[$field['field_name']]);
+					}
 				}
-				*/
 			}
 		}
 		
 		$this->EE->load->library('javascript');
 		
+		$data = $this->EE->javascript->generate_json($this->entries, TRUE);
+		
+		$this->EE->load->library('typography');
+		
+		$data = $this->EE->typography->parse_file_paths($data);
+		
 		if ($this->EE->TMPL->fetch_param('terminate') == 'yes')
 		{
-			return $this->EE->output->send_ajax_response($entries);
+			if ($this->EE->config->item('send_headers') == 'y')
+			{
+				@header('Content-Type: application/json');
+			}
+			
+			exit($data);
 		}
 		
-		return $this->EE->javascript->generate_json($entries, TRUE);
+		return $data;
 	}
 	
 	private function channel_sql()
@@ -171,6 +200,53 @@ class Json
 		}
 		
 		return $this->channel->sql;
+	}
+	
+	protected function entries_matrix($entry_id, $field, $field_data)
+	{
+		if (is_null($this->entries_matrix_rows))
+		{
+			$this->entries_matrix_rows = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
+								  ->order_by('row_order')
+								  ->get('matrix_data')
+								  ->result_array();
+		}
+		
+		if (is_null($this->entries_matrix_cols))
+		{
+			$cols = $this->EE->db->get('matrix_cols')->result_array();
+			
+			foreach ($cols as $col)
+			{
+				$this->entries_matrix_cols[$col['col_id']] = $col;
+			}
+			
+			unset($cols);
+		}
+		
+		$data = array();
+		
+		foreach ($this->entries_matrix_rows as &$matrix_row)
+		{
+			if ($matrix_row['entry_id'] == $entry_id && $matrix_row['field_id'] == $field['field_id'])
+			{
+				$field_settings = unserialize(base64_decode($field['field_settings']));
+				
+				$row = array('row_id' => $matrix_row['row_id']);
+				
+				foreach ($field_settings['col_ids'] as $col_id)
+				{
+					if (isset($this->entries_matrix_cols[$col_id]))
+					{
+						$row[$this->entries_matrix_cols[$col_id]['col_name']] = $matrix_row['col_id_'.$col_id];
+					}
+				}
+				
+				$data[] = $row;
+			}
+		}
+		
+		return $data;
 	}
 	
 	public function members()
@@ -325,5 +401,5 @@ class Json
 		return $buffer;
 	}
 }
-/* End of file pi.plugin.php */ 
-/* Location: ./system/expressionengine/third_party/plugin/pi.plugin.php */ 
+/* End of file pi.json.php */ 
+/* Location: ./system/expressionengine/third_party/json/pi.json.php */ 
