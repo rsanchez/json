@@ -47,16 +47,18 @@ class Json
 			$fields = explode('|', $this->EE->TMPL->fetch_param('fields'));
 		}
 		
-		if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $this->channel_sql(), $match))
+		$sql = $this->entries_channel_sql();
+		
+		if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $sql, $match))
 		{
 			$this->entries_entry_ids = explode(',', $match[1]);
 			
 			$this->entries_custom_fields = $this->EE->db->select('channel_fields.*, channels.channel_id')
-					->from('channel_fields')
-					->join('channels', 'channel_fields.group_id = channels.field_group')
-					->where_in('channels.channel_name', explode('|', $this->EE->TMPL->fetch_param('channel')))
-					->get()
-					->result_array();
+								    ->from('channel_fields')
+								    ->join('channels', 'channel_fields.group_id = channels.field_group')
+								    ->where_in('channels.channel_name', explode('|', $this->EE->TMPL->fetch_param('channel')))
+								    ->get()
+								    ->result_array();
 			
 			$default_fields = array(
 				't.title',
@@ -93,16 +95,36 @@ class Json
 			{
 				if (empty($fields) || in_array($field['field_name'], $fields))
 				{
-					$select[] = 'd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
+					$select[] = 'wd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
 				}
 			}
 			
-			$this->entries = $this->EE->db->select(implode(', ', $select), FALSE)
-						->from('channel_titles t')
-						->join('channel_data d', 't.entry_id = d.entry_id')
-						->where_in('t.entry_id', $this->entries_entry_ids)
-						->get()
-						->result_array();
+			$this->EE->db->select(implode(', ', $select), FALSE)
+				     ->from('channel_titles t')
+				     ->join('channel_data wd', 't.entry_id = wd.entry_id')
+				     ->where_in('t.entry_id', $this->entries_entry_ids);
+			
+			if (preg_match('/ORDER BY (.*)?/', $sql, $match))
+			{
+				if (strpos($match[1], 'w.') !== FALSE)
+				{
+					$this->EE->db->join('channels w', 't.channel_id = w.channel_id');
+				}
+				
+				if (strpos($match[1], 'm.') !== FALSE)
+				{
+					$this->EE->db->join('members m', 'm.member_id = t.author_id');
+				}
+				
+				if (strpos($match[1], 'md.') !== FALSE)
+				{
+					$this->EE->db->join('member_data md', 'm.member_id = md.member_id');
+				}
+				
+				$this->EE->db->order_by($match[1]);
+			}
+			
+			$this->entries = $this->EE->db->get()->result_array();
 			
 			foreach ($this->entries as &$entry)
 			{
@@ -124,12 +146,10 @@ class Json
 				foreach ($this->entries_custom_fields as &$field)
 				{
 //					$entry[$field['field_name']] = $this->replace_tag($entry, $field, $entry['field_id_'.$field['field_id']]);
-					
-					$func = 'entries_'.$field['field_type'];
-					
-					if (is_callable(array($this, $func)))
+
+					if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
 					{
-						$entry[$field['field_name']] = call_user_func(array($this, $func), $entry['entry_id'], $field, $entry[$field['field_name']]);
+						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']]);
 					}
 				}
 			}
@@ -156,7 +176,7 @@ class Json
 		return $data;
 	}
 	
-	private function channel_sql()
+	private function entries_channel_sql()
 	{
 		if (empty($this->channel))
 		{
