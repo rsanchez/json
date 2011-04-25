@@ -173,7 +173,48 @@ class Json
 			exit($data);
 		}
 		
+		// Output the file. status message is assigned to $output although 
+		// not displayed anywhere at the moment.
+		$output = $this->output_file($data);
+		
 		return $data;
+	}
+	
+	//Output returned data to file
+	public function output_file($data) 
+	{
+		$this->CI =& get_instance(); 
+		$this->CI->load->helper('file');
+		$this->CI->load->helper('array');
+		$this->CI->load->helper('date');
+		
+		$path = $this->EE->TMPL->fetch_param('output');
+		$refresh = $this->EE->TMPL->fetch_param('refresh');
+		
+		$now = now();
+		$file_info = get_file_info($path);
+		$date_created = element('date', $file_info);
+		
+		$difference = $now - $date_created;
+		
+		if ($difference > $refresh)
+		{
+			//rewrite the file
+			if ( ! write_file($path, $data))
+			{
+			     $return = 'Unable to write the file - Please check path permissions';
+			}
+			else 
+			{
+			     $return = 'File written!';
+			}
+		}
+		else
+		{
+			$return = "Using the cached version of the file";
+		}
+
+		return $return;	
 	}
 	
 	private function entries_channel_sql()
@@ -422,4 +463,4 @@ class Json
 	}
 }
 /* End of file pi.json.php */ 
-/* Location: ./system/expressionengine/third_party/json/pi.json.php */ 
+/* Location: ./system/expressionengine/third_party/json/pi.json.php */
