@@ -51,6 +51,14 @@ json:entries is a single tag, not a tag pair. Use channel:entries parameters to 
 #### json:entries Parameters
 
 See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
+	
+	output="images/output.json"
+
+Save the contents to an external file. Remember to set the permissions. Path is relative to the main index.php file and you do not need a slash at the start
+
+	refresh="240"
+
+Number in seconds on how often to refresh the output file. 
 
 ### json:members
 
