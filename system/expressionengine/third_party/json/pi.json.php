@@ -2,7 +2,7 @@
 
 $plugin_info = array(
 	'pi_name' => 'JSON',
-	'pi_version' => '1.0.1',
+	'pi_version' => '1.0.2',
 	'pi_author' => 'Rob Sanchez',
 	'pi_author_url' => 'http://barrettnewton.com/',
 	'pi_description' => 'Output ExpressionEngine data in JSON format.',
@@ -134,6 +134,12 @@ class Json
 				{
 					$select[] = 'wd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
 				}
+			}
+			
+			//we need entry_id, always grab it
+			if ( ! in_array('t.entry_id', $select))
+			{
+				$select[] = 't.entry_id';
 			}
 			
 			$this->EE->db->select(implode(', ', $select), FALSE)
