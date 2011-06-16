@@ -13,6 +13,7 @@ class Json
 {
 	public $return_data = '';
 	
+	/* caches */
 	public $entries;
 	public $entries_entry_ids;
 	public $entries_custom_fields;
@@ -21,35 +22,71 @@ class Json
 
 	public function Json()
 	{
-		$this->EE = get_instance();
+		$this->EE =& get_instance();
 	}
 	
-	protected function entries_initialize()
+	public function entries()
 	{
+		//initialize caches
 		$this->entries = array();
 		$this->entries_entry_ids = array();
 		$this->entries_custom_fields = array();
 		$this->entries_matrix_rows = NULL;
 		//$this->entries_matrix_cols = NULL;
-	}
-	
-	public function entries()
-	{
-		$this->entries_initialize();
 		
-		if ($this->EE->TMPL->fetch_param('xhr') == 'yes' && ! $this->EE->input->is_ajax_request())
+		//exit if ajax request is required and not found
+		if ($this->EE->TMPL->fetch_param('xhr') === 'yes' && ! $this->EE->input->is_ajax_request())
 		{
 			return '';
 		}
 		
-		if ($this->EE->TMPL->fetch_param('fields'))
+		//did the user specify any fields?
+		$fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : FALSE;
+		
+		//instantiate channel module object
+		if (empty($this->channel))
 		{
-			$fields = explode('|', $this->EE->TMPL->fetch_param('fields'));
+			require_once PATH_MOD.'channel/mod.channel'.EXT;
+			
+			$this->channel = new Channel;
 		}
 		
-		$sql = $this->entries_channel_sql();
+		//run through the channel module process to grab the entries
+		$this->channel->initialize();
+
+		$this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
+
+		if ($this->channel->enable['custom_fields'] == TRUE)
+		{
+			$this->channel->fetch_custom_channel_fields();
+		}
+
+		$save_cache = FALSE;
+
+		if ($this->EE->config->item('enable_sql_caching') == 'y')
+		{
+			if (FALSE == ($this->channel->sql = $this->channel->fetch_cache()))
+			{
+				$save_cache = TRUE;
+			}
+			else
+			{
+				if ($this->EE->TMPL->fetch_param('dynamic') != 'no')
+				{
+					if (preg_match("#(^|\/)C(\d+)#", $this->channel->query_string, $match) OR in_array($this->channel->reserved_cat_segment, explode("/", $this->channel->query_string)))
+					{
+						$this->channel->cat_request = TRUE;
+					}
+				}
+			}
+		}
 		
-		if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $sql, $match))
+		if ( ! $this->channel->sql)
+		{
+			$this->channel->build_sql_query();
+		}
+		
+		if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $this->channel->sql, $match))
 		{
 			$this->entries_entry_ids = explode(',', $match[1]);
 			
@@ -104,7 +141,7 @@ class Json
 				     ->join('channel_data wd', 't.entry_id = wd.entry_id')
 				     ->where_in('t.entry_id', $this->entries_entry_ids);
 			
-			if (preg_match('/ORDER BY (.*)?/', $sql, $match))
+			if (preg_match('/ORDER BY (.*)?/', $this->channel->sql, $match))
 			{
 				if (strpos($match[1], 'w.') !== FALSE)
 				{
@@ -128,6 +165,7 @@ class Json
 			
 			foreach ($this->entries as &$entry)
 			{
+				//format dates as javascript unix time (in microseconds!)
 				if (isset($entry['entry_date']))
 				{
 					$entry['entry_date'] .= '000';
@@ -147,6 +185,7 @@ class Json
 				{
 //					$entry[$field['field_name']] = $this->replace_tag($entry, $field, $entry['field_id_'.$field['field_id']]);
 
+					//call our custom callback for this fieldtype if it exists
 					if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
 					{
 						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']]);
@@ -163,9 +202,9 @@ class Json
 		
 		$data = $this->EE->typography->parse_file_paths($data);
 		
-		if ($this->EE->TMPL->fetch_param('terminate') == 'yes')
+		if ($this->EE->TMPL->fetch_param('terminate') === 'yes')
 		{
-			if ($this->EE->config->item('send_headers') == 'y')
+			if ($this->EE->config->item('send_headers') === 'y')
 			{
 				@header('Content-Type: application/json');
 			}
@@ -174,52 +213,6 @@ class Json
 		}
 		
 		return $data;
-	}
-	
-	private function entries_channel_sql()
-	{
-		if (empty($this->channel))
-		{
-			require_once PATH_MOD.'channel/mod.channel'.EXT;
-			
-			$this->channel = new Channel;
-		}
-		
-		$this->channel->initialize();
-
-		$this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
-
-		if ($this->channel->enable['custom_fields'] == TRUE)
-		{
-			$this->channel->fetch_custom_channel_fields();
-		}
-
-		$save_cache = FALSE;
-
-		if ($this->EE->config->item('enable_sql_caching') == 'y')
-		{
-			if (FALSE == ($this->channel->sql = $this->channel->fetch_cache()))
-			{
-				$save_cache = TRUE;
-			}
-			else
-			{
-				if ($this->EE->TMPL->fetch_param('dynamic') != 'no')
-				{
-					if (preg_match("#(^|\/)C(\d+)#", $this->channel->query_string, $match) OR in_array($this->channel->reserved_cat_segment, explode("/", $this->channel->query_string)))
-					{
-						$this->channel->cat_request = TRUE;
-					}
-				}
-			}
-		}
-		
-		if ( ! $this->channel->sql)
-		{
-			$this->channel->build_sql_query();
-		}
-		
-		return $this->channel->sql;
 	}
 	
 	protected function entries_matrix($entry_id, $field, $field_data)
@@ -267,6 +260,63 @@ class Json
 		}
 		
 		return $data;
+	}
+	
+	public function categories($params = NULL)
+	{
+		if (is_null($params))
+		{
+			$params = $this->EE->TMPL->tagparams;
+		}
+		
+		$this->EE->load->helper('array');
+		
+		$channel = element('channel', $params);
+		$group_id = element('group_id', $params, element('category_group', $params));
+		$cat_id = element('cat_id', $params, element('category_id', $params, element('show', $params)));
+		$status = element('status', $params);
+		$parent_only = element('parent_only', $params);
+		$show_empty = element('show_empty', $params, TRUE);
+		$joins = array();
+		
+		if ($channel)
+		{
+			$this->EE->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
+			$this->EE->db->join('channels', 'channels.channel_id = channel_titles.channel_id');
+			$this->EE->db->where_in('channels.channel_name', explode('|', $channel));
+			$joins[] = 'channels';
+			$joins[] = 'channel_titles';
+		}
+		
+		if ($group_id)
+		{
+			$this->EE->db->where_in('categories.group_id', explode('|', $group_id));
+		}
+		
+		if ($cat_id)
+		{
+			$this->EE->db->where_in('categories.cat_id', explode('|', $cat_id));
+		}
+		
+		if ($status)
+		{
+			if ( ! in_array('channel_titles', $joins))
+			{
+				$this->EE->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
+			}
+			
+			$this->EE->db->where_in('channel_titles.status', explode('|', $status));
+		}
+		
+		if ($parent_only)
+		{
+			$this->EE->db->where('categories.parent_id', 0);
+		}
+		
+		if ($show_empty)
+		{
+			$this->EE->db->where('count >', 0);
+		}
 	}
 	
 	public function members()
