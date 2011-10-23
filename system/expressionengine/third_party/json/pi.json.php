@@ -19,6 +19,7 @@ class Json
 	public $entries_custom_fields;
 	protected $entries_matrix_rows;
 	protected $entries_matrix_cols;
+	protected $entries_relationship_data;
 
 	public function Json()
 	{
@@ -32,6 +33,7 @@ class Json
 		$this->entries_entry_ids = array();
 		$this->entries_custom_fields = array();
 		$this->entries_matrix_rows = NULL;
+		$this->entries_relationship_data = NULL;
 		//$this->entries_matrix_cols = NULL;
 		
 		//exit if ajax request is required and not found
@@ -266,6 +268,26 @@ class Json
 		}
 		
 		return $data;
+	}
+
+	protected function entries_rel($entry_id, $field, $field_data)
+	{
+        $data = NULL;
+
+        if (!is_null($field_data))
+        {
+            $this->entries_relationship_data = $this->EE->db->select('rel_child_id')
+                                            ->where('rel_id', $field_data)
+                                            ->get('relationships');
+        }
+
+        if ($this->entries_relationship_data->num_rows() > 0)
+        {
+            $data = $this->entries_relationship_data->row('rel_child_id');
+        }
+
+        return $data;
+
 	}
 	
 	public function categories($params = NULL)
