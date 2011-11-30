@@ -192,17 +192,17 @@ class Json
 				//format dates as javascript unix time (in microseconds!)
 				if (isset($entry['entry_date']))
 				{
-					$entry['entry_date'] .= '000';
+					$entry['entry_date'] = (int) ($entry['entry_date'].'000');
 				}
 				
 				if (isset($entry['edit_date']))
 				{
-					$entry['edit_date'] = strtotime($entry['edit_date']).'000';
+					$entry['edit_date'] = (int) (strtotime($entry['edit_date']).'000');
 				}
 				
 				if (isset($entry['expiration_date']))
 				{
-					$entry['expiration_date'] = ($entry['expiration_date']) ? $entry['expiration_date'].'000' : '';
+					$entry['expiration_date'] = ($entry['expiration_date']) ? (int) ($entry['expiration_date'].'000') : NULL;
 				}
 				
 				foreach ($this->entries_custom_fields as &$field)
