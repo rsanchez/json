@@ -52,6 +52,12 @@ json:entries is a single tag, not a tag pair. Use channel:entries parameters to 
 
 See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
 
+Plus:
+
+	show_categories="yes"
+
+This will add categories to the entries response
+
 ### json:members
 
 	{exp:json:members member_id="1|2"}
