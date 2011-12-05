@@ -58,7 +58,7 @@ class Json
 
 		$this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
 
-		if ($this->channel->enable['custom_fields'] == TRUE)
+		if ($this->channel->enable['custom_fields'] === TRUE)
 		{
 			$this->channel->fetch_custom_channel_fields();
 		}
@@ -180,7 +180,16 @@ class Json
 				$this->EE->db->order_by($match[1]);
 			}
 			
-			$this->entries = $this->EE->db->get()->result_array();
+			$query = $this->channel->query = $this->EE->db->get();
+			
+			if ($this->EE->TMPL->fetch_param('show_categories') === 'yes')
+			{
+				$this->channel->fetch_categories();
+			}
+			
+			$this->entries = $query->result_array();
+			
+			$query->free_result();
 			
 			foreach ($this->entries as &$entry)
 			{
@@ -207,12 +216,38 @@ class Json
 				
 				foreach ($this->entries_custom_fields as &$field)
 				{
-//					$entry[$field['field_name']] = $this->replace_tag($entry, $field, $entry['field_id_'.$field['field_id']]);
-
 					//call our custom callback for this fieldtype if it exists
 					if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
 					{
 						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']]);
+					}
+				}
+				
+				if ($this->EE->TMPL->fetch_param('show_categories') === 'yes')
+				{
+					$entry['categories'] = array();
+					
+					if (isset($this->channel->categories[$entry['entry_id']]))
+					{
+						foreach ($this->channel->categories[$entry['entry_id']] as $raw_category)
+						{
+							$category = array(
+								'category_id' => $raw_category[0],
+								'parent_id' => $raw_category[1],
+								'category_name' => $raw_category[2],
+								'category_image' => $raw_category[3],
+								'category_description' => $raw_category[4],
+								'category_group' => $raw_category[5],
+								'category_url_title' => $raw_category[6],
+							);
+	
+							foreach ($this->channel->catfields as $cat_field)
+							{
+								$category[$cat_field['field_name']] = (isset($raw_category['field_id_'.$cat_field['field_id']])) ? $raw_category['field_id_'.$cat_field['field_id']] : '';
+							}
+							
+							$entry['categories'][] = $category;
+						}
 					}
 				}
 			}
@@ -243,22 +278,25 @@ class Json
 	{
 		if (is_null($this->entries_matrix_rows))
 		{
-			$this->entries_matrix_rows = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
-								  ->order_by('row_order')
-								  ->get('matrix_data')
-								  ->result_array();
+			$query = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
+					      ->order_by('row_order')
+					      ->get('matrix_data');
+			
+			$this->entries_matrix_rows = $query->result_array();
+			
+			$query->free_result();
 		}
 		
 		if (is_null($this->entries_matrix_cols))
 		{
-			$cols = $this->EE->db->get('matrix_cols')->result_array();
+			$query = $this->EE->db->get('matrix_cols');
 			
-			foreach ($cols as $col)
+			foreach ($query->result_array() as $row)
 			{
-				$this->entries_matrix_cols[$col['col_id']] = $col;
+				$this->entries_matrix_cols[$row->col_id] = $row;
 			}
 			
-			unset($cols);
+			$query->free_result();
 		}
 		
 		$data = array();
@@ -275,7 +313,7 @@ class Json
 				{
 					if (isset($this->entries_matrix_cols[$col_id]))
 					{
-						$row[$this->entries_matrix_cols[$col_id]['col_name']] = $matrix_row['col_id_'.$col_id];
+						$row[$this->entries_matrix_cols[$col_id]->col_name] = $matrix_row['col_id_'.$col_id];
 					}
 				}
 				
@@ -288,22 +326,28 @@ class Json
 
 	protected function entries_rel($entry_id, $field, $field_data)
 	{
-        $data = NULL;
-
-        if (!is_null($field_data))
-        {
-            $this->entries_relationship_data = $this->EE->db->select('rel_child_id')
-                                            ->where('rel_id', $field_data)
-                                            ->get('relationships');
-        }
-
-        if ($this->entries_relationship_data->num_rows() > 0)
-        {
-            $data = $this->entries_relationship_data->row('rel_child_id');
-        }
-
-        return $data;
-
+		if (is_null($this->entries_relationship_data))
+		{
+			$query = $this->EE->db->select('rel_child_id, rel_id')
+					      ->where('rel_parent_id', $entry_id)
+					      ->get('relationships');
+			
+			$this->entries_relationship_data = array();
+			
+			foreach ($query->result() as $row)
+			{
+				$this->entries_relationship_data[$row->rel_id] = $row->rel_child_id;
+			}
+			
+			$query->free_result();
+		}
+		
+		if ( ! isset($this->entries_relationship_data[$field_data]))
+		{
+			return NULL;
+		}
+		
+		return $this->entries_relationship_data[$field_data];
 	}
 	
 	public function categories($params = NULL)
