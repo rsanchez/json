@@ -4,14 +4,25 @@ $plugin_info = array(
 	'pi_name' => 'JSON',
 	'pi_version' => '1.0.3',
 	'pi_author' => 'Rob Sanchez',
-	'pi_author_url' => 'http://barrettnewton.com/',
+	'pi_author_url' => 'http://github.com/rsanchez',
 	'pi_description' => 'Output ExpressionEngine data in JSON format.',
-	'pi_usage' => Json::usage()
+	'pi_usage' => '
+{exp:json:entries channel="news"}
+
+{exp:json:entries channel="products" search:product_size="10"}
+
+{exp:json:members member_id="1"}',
 );
 
 class Json
 {
-	public $return_data = '';
+	/* settings */
+	protected $content_type = 'application/json';
+	protected $terminate = FALSE;
+	protected $xhr = FALSE;
+	protected $fields = array();
+	protected $jsonp = FALSE;
+	protected $callback;
 	
 	/* caches */
 	public $entries;
@@ -21,29 +32,20 @@ class Json
 	protected $entries_matrix_cols;
 	protected $entries_relationship_data;
 
-	public function Json()
+	public function __construct()
 	{
 		$this->EE =& get_instance();
 	}
 	
 	public function entries()
 	{
-		//initialize caches
-		$this->entries = array();
-		$this->entries_entry_ids = array();
-		$this->entries_custom_fields = array();
-		$this->entries_matrix_rows = NULL;
-		$this->entries_relationship_data = NULL;
-		//$this->entries_matrix_cols = NULL;
+		$this->initialize('entries');
 		
 		//exit if ajax request is required and not found
-		if ($this->EE->TMPL->fetch_param('xhr') === 'yes' && ! $this->EE->input->is_ajax_request())
+		if ($this->check_xhr_required())
 		{
 			return '';
 		}
-		
-		//did the user specify any fields?
-		$fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : FALSE;
 		
 		//instantiate channel module object
 		if (empty($this->channel))
@@ -113,13 +115,13 @@ class Json
 			
 			$select = array();
 			
-			if ( ! empty($fields))
+			if ( ! empty($this->fields))
 			{
 				foreach ($default_fields as $field)
 				{
 					$key = substr($field, 2);
 					
-					if (in_array($key, $fields))
+					if (in_array($key, $this->fields))
 					{
 						$select[] = $field;
 					}
@@ -132,7 +134,7 @@ class Json
 			
 			foreach ($this->entries_custom_fields as &$field)
 			{
-				if (empty($fields) || in_array($field['field_name'], $fields))
+				if (empty($this->fields) || in_array($field['field_name'], $this->fields))
 				{
 					$select[] = 'wd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
 				}
@@ -174,6 +176,11 @@ class Json
 			if ($this->EE->TMPL->fetch_param('show_categories') === 'yes')
 			{
 				$this->channel->fetch_categories();
+				
+				if ($this->EE->TMPL->fetch_param('show_category_group'))
+				{
+					$show_category_group = explode('|', $this->EE->TMPL->fetch_param('show_category_group'));
+				}
 			}
 			
 			$this->entries = $query->result_array();
@@ -215,6 +222,11 @@ class Json
 					{
 						foreach ($this->channel->categories[$entry['entry_id']] as $raw_category)
 						{
+							if ( ! empty($show_category_group) && ! in_array($raw_category[5], $show_category_group))
+							{
+								continue;
+							}
+							
 							$category = array(
 								'category_id' => $raw_category[0],
 								'parent_id' => $raw_category[1],
@@ -245,17 +257,7 @@ class Json
 		
 		$data = $this->EE->typography->parse_file_paths($data);
 		
-		if ($this->EE->TMPL->fetch_param('terminate') === 'yes')
-		{
-			if ($this->EE->config->item('send_headers') === 'y')
-			{
-				@header('Content-Type: application/json');
-			}
-			
-			exit($data);
-		}
-		
-		return $data;
+		return $this->respond($data);
 	}
 	
 	protected function entries_matrix($entry_id, $field, $field_data)
@@ -334,8 +336,54 @@ class Json
 		return $this->entries_relationship_data[$field_data];
 	}
 	
+	public function search()
+	{
+		$search_id = $this->EE->TMPL->fetch_param('search_id');
+		
+		if ( ! $search_id)
+		{
+			$search_id = end($this->EE->uri->segment_array());
+		}
+        
+		if ($search_id)
+		{
+			$query = $this->EE->db->where('search_id', $search_id)
+					      ->limit(1)
+					      ->get('exp_search');
+			
+			if ($query->num_rows() > 0)
+			{
+				$search = $query->row_array();
+				
+				$query->free_result();
+				
+				if (preg_match('/IN \(([\d,]+)\)/', $query->row('query'), $match))
+				{
+					$this->EE->TMPL->tagparams['entry_id'] = (strpos($match[1], ',') !== FALSE) ? str_replace(',', '|', $match[1]) : $match[1];
+					
+					return $this->entries();
+				}
+			}
+		}
+		
+		$this->initialize();
+		
+		return $this->response(array());
+	}
+	
+	/**
+	 * Categories
+	 *
+	 * @TODO a work in progress, does not work yet
+	 * 
+	 * @param array|null $params
+	 * 
+	 * @return string
+	 */
 	public function categories($params = NULL)
 	{
+		$this->initialize();
+		
 		if (is_null($params))
 		{
 			$params = $this->EE->TMPL->tagparams;
@@ -391,16 +439,18 @@ class Json
 		}
 	}
 	
+	/**
+	 * Members
+	 * 
+	 * @return string
+	 */
 	public function members()
 	{
-		if ($this->EE->TMPL->fetch_param('xhr') == 'yes' && ! $this->EE->input->is_ajax_request())
+		$this->initialize();
+		
+		if ($this->check_xhr_required())
 		{
 			return '';
-		}
-		
-		if ($this->EE->TMPL->fetch_param('fields'))
-		{
-			$fields = explode('|', $this->EE->TMPL->fetch_param('fields'));
 		}
 		
 		$default_fields = array(
@@ -439,20 +489,22 @@ class Json
 			'm.bday_y',
 		);
 			
-		$custom_fields = $this->EE->db->select('m_field_id, m_field_name')
-						->from('member_fields')
-						->get()
-						->result_array();
+		$query = $this->EE->db->select('m_field_id, m_field_name')
+				      ->get('member_fields');
+		
+		$custom_fields = $query->result_array();
+		
+		$query->free_result();
 		
 		$select = array();
 		
-		if ( ! empty($fields))
+		if ( ! empty($this->fields))
 		{
 			foreach ($default_fields as $field)
 			{
 				$key = substr($field, 2);
 				
-				if (in_array($key, $fields))
+				if (in_array($key, $this->fields))
 				{
 					$select[] = $field;
 				}
@@ -465,15 +517,15 @@ class Json
 		
 		foreach ($custom_fields as &$field)
 		{
-			if (empty($fields) || in_array($field['m_field_name'], $fields))
+			if (empty($this->fields) || in_array($field['m_field_name'], $this->fields))
 			{
 				$select[] = 'd.'.$this->EE->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.$this->EE->db->protect_identifiers($field['m_field_name']);
 			}
 		}
 		
 		$this->EE->db->select(implode(', ', $select), FALSE)
-					->from('members m')
-					->join('member_data d', 'm.member_id = d.member_id');
+			     ->from('members m')
+			     ->join('member_data d', 'm.member_id = d.member_id');
 		
 		if ($this->EE->TMPL->fetch_param('member_id'))
 		{
@@ -494,7 +546,11 @@ class Json
 			$this->EE->db->limit($this->EE->TMPL->fetch_param('limit'));
 		}
 		
-		$members = $this->EE->db->get()->result_array();
+		$query = $this->EE->db->get();
+		
+		$members = $query->result_array();
+		
+		$query->free_result();
 		
 		$date_fields = array(
 			'join_date',
@@ -516,31 +572,65 @@ class Json
 			}
 		}
 		
-		$this->EE->load->library('javascript');
-		
-		if ($this->EE->TMPL->fetch_param('terminate') == 'yes')
-		{
-			return $this->EE->output->send_ajax_response($members);
-		}
-		
-		return $this->EE->javascript->generate_json($members, TRUE);
+		return $this->respond($members);
 	}
 	
-	public static function usage()
+	protected function initialize($which = NULL)
 	{
-		ob_start(); 
-?>
-{exp:json:entries channel="news"}
-
-{exp:json:entries channel="products" search:product_size="10"}
-
-{exp:json:members member_id="1"}
-<?php
-		$buffer = ob_get_contents();
-		      
-		ob_end_clean(); 
-	      
-		return $buffer;
+		switch($which)
+		{
+			case 'entries':
+				//initialize caches
+				$this->entries = array();
+				$this->entries_entry_ids = array();
+				$this->entries_custom_fields = array();
+				$this->entries_matrix_rows = NULL;
+				$this->entries_relationship_data = NULL;
+				break;
+		}
+		
+		$this->xhr = $this->EE->TMPL->fetch_param('xhr') === 'yes';
+		
+		$this->terminate = $this->EE->TMPL->fetch_param('terminate') === 'yes';
+		
+		$this->fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : array();
+		
+		$this->jsonp = $this->EE->TMPL->fetch_param('jsonp') === 'yes';
+		
+		$this->EE->load->library('jsonp');
+		
+		$this->callback = ($this->EE->TMPL->fetch_param('callback') && $this->EE->jsonp->isValidCallback($this->EE->TMPL->fetch_param('callback')))
+				  ? $this->EE->TMPL->fetch_param('callback') : NULL;
+		
+		$this->content_type = $this->EE->TMPL->fetch_param('content_type', ($this->jsonp && $this->callback) ? 'application/javascript' : 'application/json');
+	}
+	
+	protected function check_xhr_required()
+	{
+		return $this->xhr && ! $this->EE->input->is_ajax_request();
+	}
+	
+	protected function respond($response)
+	{
+		$response = ( ! is_string($response)) ? $this->EE->javascript->generate_json($response, TRUE) : $response;
+		
+		if ($this->check_xhr_required())
+		{
+			$response = '';
+		}
+		else if ($this->jsonp && $this->callback)
+		{
+			$response = sprintf('%s(%s)', $this->callback, $response);
+		}
+		
+		if ($this->terminate)
+		{
+			@header('Content-Type: '.$this->content_type);
+			
+			exit($response);
+		}
+		
+		return $response;
 	}
 }
 /* End of file pi.json.php */ 
