@@ -21,6 +21,7 @@ class Json
 	protected $terminate = FALSE;
 	protected $xhr = FALSE;
 	protected $fields = array();
+	protected $json_keys = array();
 	protected $jsonp = FALSE;
 	protected $callback;
 	
@@ -246,6 +247,18 @@ class Json
 						}
 					}
 				}
+
+				$entry['entry_id'] = (int) $entry['entry_id'];
+
+				foreach($this->json_keys as $field_name => $json_key)
+				{
+					if($field_name != $json_key)
+					{
+						$entry[$json_key] = $entry[$field_name];
+						unset($entry[$field_name]);
+					}
+				}
+				
 			}
 		}
 		
@@ -594,6 +607,12 @@ class Json
 		$this->terminate = $this->EE->TMPL->fetch_param('terminate') === 'yes';
 		
 		$this->fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : array();
+		foreach($this->fields as $field)
+		{
+			$name = explode('=',$field);
+			$this->json_keys[$name[0]] = isset($name[1]) ? $name[1] : $name[0];
+		}
+		$this->fields = array_keys($this->json_keys);
 		
 		$this->jsonp = $this->EE->TMPL->fetch_param('jsonp') === 'yes';
 		
