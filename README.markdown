@@ -36,13 +36,19 @@ Set jsonp to yes to enable a JSONP response. You must also specify a valid callb
 
 Set a callback function for your JSONP request. Since query strings do not work out-of-the-box in EE, you may want to consider using a URL segment to specify your callback, ie. callback="{segment_3}", rather than the standard ?callback=foo method.
 
+	date_format="U"
+	
+Use a different date format. Note: always returns dates as string.
+
 ## Dates
 
-Date fields are in unix timestamp format, accurate to milliseconds. Use the Javascript Date object in combination with date field data:
+By default, the date fields are in unix timestamp format, accurate to milliseconds. Use the Javascript Date object in combination with date field data:
 
 	for (i in data) {
 		var entryDate = new Date(data[i].entry_date);
 	}
+
+If you require a different output format for the date fields, set the date_format= parameter. This uses the php date() function. common formats include "U" (unix timestamp in seconds), "c" (ISO 8601) or "Y-m-d H:i" (2011-12-24 19:06).
 
 ## json:entries
 
