@@ -22,6 +22,7 @@ class Json
 	protected $xhr = FALSE;
 	protected $fields = array();
 	protected $json_keys = array();
+	protected $date_format = FALSE;
 	protected $jsonp = FALSE;
 	protected $callback;
 	
@@ -193,17 +194,23 @@ class Json
 				//format dates as javascript unix time (in microseconds!)
 				if (isset($entry['entry_date']))
 				{
-					$entry['entry_date'] = (int) ($entry['entry_date'].'000');
+					$entry['entry_date'] = ($this->date_format) ? date($this->date_format, $entry['entry_date']) : (int) ($entry['entry_date'].'000');
 				}
 				
 				if (isset($entry['edit_date']))
 				{
-					$entry['edit_date'] = (int) (strtotime($entry['edit_date']).'000');
+					$entry['edit_date'] = strtotime($entry['edit_date']);
+					$entry['edit_date'] = ($this->date_format) ? date($this->date_format, $entry['edit_date']) : (int) ($entry['edit_date'].'000');
 				}
 				
 				if (isset($entry['expiration_date']))
 				{
-					$entry['expiration_date'] = ($entry['expiration_date']) ? (int) ($entry['expiration_date'].'000') : NULL;
+					if($entry['expiration_date'])
+					{
+						$entry['expiration_date'] = ($this->date_format) ? date($this->date_format, $entry['expiration_date']) : (int) ($entry['expiration_date'].'000');
+					}
+					else $entry['expiration_date'] = NULL;
+					
 				}
 				
 				foreach ($this->entries_custom_fields as &$field)
@@ -614,6 +621,8 @@ class Json
 		}
 		$this->fields = array_keys($this->json_keys);
 		
+		$this->date_format = $this->EE->TMPL->fetch_param('date_format', false);
+
 		$this->jsonp = $this->EE->TMPL->fetch_param('jsonp') === 'yes';
 		
 		$this->EE->load->library('jsonp');
