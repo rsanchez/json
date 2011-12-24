@@ -20,9 +20,13 @@ Set terminate to yes to terminate the template and output your json immediately,
 
 Specify which fields you wish to have in the array. Separate multiple fields by a pipe character. If you do not specify fields, you will get all of the default fields' data.
 
-	fields="entry_id=id|entry_date=start|title"
+	fields="entry_id:id|entry_date:start|title"
 
-To output different fieldnames for the json keys (id instead of entry_id) specify the fieldname as fieldname=keyname.
+To output different fieldnames for the JSON keys (ie. id instead of entry_id) specify the fieldname as fieldname:keyname.
+
+	camel_case="yes"
+
+Output fieldnames with camel case, ie entryId instead of entry_id;
 
 	content_type="text/javascript"
 

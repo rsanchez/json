@@ -21,10 +21,10 @@ class Json
 	protected $terminate = FALSE;
 	protected $xhr = FALSE;
 	protected $fields = array();
-	protected $json_keys = array();
 	protected $date_format = FALSE;
 	protected $jsonp = FALSE;
 	protected $callback;
+	protected $camel_case = FALSE;
 	
 	/* caches */
 	public $entries;
@@ -123,7 +123,7 @@ class Json
 				{
 					$key = substr($field, 2);
 					
-					if (in_array($key, $this->fields))
+					if (array_key_exists($key, $this->fields))
 					{
 						$select[] = $field;
 					}
@@ -136,7 +136,7 @@ class Json
 			
 			foreach ($this->entries_custom_fields as &$field)
 			{
-				if (empty($this->fields) || in_array($field['field_name'], $this->fields))
+				if (empty($this->fields) || array_key_exists($field['field_name'], $this->fields))
 				{
 					$select[] = 'wd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
 				}
@@ -194,23 +194,17 @@ class Json
 				//format dates as javascript unix time (in microseconds!)
 				if (isset($entry['entry_date']))
 				{
-					$entry['entry_date'] = ($this->date_format) ? date($this->date_format, $entry['entry_date']) : (int) ($entry['entry_date'].'000');
+					$entry['entry_date'] = $this->date_format($entry['entry_date']);
 				}
 				
 				if (isset($entry['edit_date']))
 				{
-					$entry['edit_date'] = strtotime($entry['edit_date']);
-					$entry['edit_date'] = ($this->date_format) ? date($this->date_format, $entry['edit_date']) : (int) ($entry['edit_date'].'000');
+					$entry['edit_date'] = $this->date_format(strtotime($entry['edit_date']));
 				}
 				
 				if (isset($entry['expiration_date']))
 				{
-					if($entry['expiration_date'])
-					{
-						$entry['expiration_date'] = ($this->date_format) ? date($this->date_format, $entry['expiration_date']) : (int) ($entry['expiration_date'].'000');
-					}
-					else $entry['expiration_date'] = NULL;
-					
+					$entry['expiration_date'] = $this->date_format($entry['expiration_date']);
 				}
 				
 				foreach ($this->entries_custom_fields as &$field)
@@ -256,28 +250,14 @@ class Json
 				}
 
 				$entry['entry_id'] = (int) $entry['entry_id'];
-
-				foreach($this->json_keys as $field_name => $json_key)
-				{
-					if($field_name != $json_key)
-					{
-						$entry[$json_key] = $entry[$field_name];
-						unset($entry[$field_name]);
-					}
-				}
-				
 			}
 		}
 		
 		$this->EE->load->library('javascript');
 		
-		$data = $this->EE->javascript->generate_json($this->entries, TRUE);
-		
 		$this->EE->load->library('typography');
 		
-		$data = $this->EE->typography->parse_file_paths($data);
-		
-		return $this->respond($data);
+		return $this->respond($this->entries, array($this->EE->typography, 'parse_file_paths'));
 	}
 	
 	protected function entries_matrix($entry_id, $field, $field_data)
@@ -356,6 +336,11 @@ class Json
 		return $this->entries_relationship_data[$field_data];
 	}
 	
+	protected function entries_date($entry_id, $field, $field_data)
+	{
+		return $this->date_format($field_data);
+	}
+	
 	public function search()
 	{
 		$search_id = $this->EE->TMPL->fetch_param('search_id');
@@ -388,7 +373,7 @@ class Json
 		
 		$this->initialize();
 		
-		return $this->response(array());
+		return $this->respond(array());
 	}
 	
 	/**
@@ -524,7 +509,7 @@ class Json
 			{
 				$key = substr($field, 2);
 				
-				if (in_array($key, $this->fields))
+				if (array_key_exists($key, $this->fields))
 				{
 					$select[] = $field;
 				}
@@ -537,7 +522,7 @@ class Json
 		
 		foreach ($custom_fields as &$field)
 		{
-			if (empty($this->fields) || in_array($field['m_field_name'], $this->fields))
+			if (empty($this->fields) || array_key_exists($field['m_field_name'], $this->fields))
 			{
 				$select[] = 'd.'.$this->EE->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.$this->EE->db->protect_identifiers($field['m_field_name']);
 			}
@@ -587,7 +572,7 @@ class Json
 			{
 				if (isset($member[$field]))
 				{
-					$member[$field] = ($member[$field]) ? $member[$field].'000' : '';
+					$member[$field] = $this->date_format($member[$field]);
 				}
 			}
 		}
@@ -613,16 +598,28 @@ class Json
 		
 		$this->terminate = $this->EE->TMPL->fetch_param('terminate') === 'yes';
 		
-		$this->fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : array();
-		foreach($this->fields as $field)
-		{
-			$name = explode('=',$field);
-			$this->json_keys[$name[0]] = isset($name[1]) ? $name[1] : $name[0];
-		}
-		$this->fields = array_keys($this->json_keys);
+		$this->camel_case = $this->EE->TMPL->fetch_param('camel_case') === 'yes';
 		
-		$this->date_format = $this->EE->TMPL->fetch_param('date_format', false);
-
+		$this->fields = array();
+		
+		if ($this->EE->TMPL->fetch_param('fields'))
+		{
+			foreach(explode('|', $this->EE->TMPL->fetch_param('fields')) as $field)
+			{
+				$split = preg_split('/[:=]/', $field);
+				
+				$this->fields[$split[0]] = isset($split[1]) ? $split[1] : $split[0];
+			}
+		}
+		
+		$this->date_format = $this->EE->TMPL->fetch_param('date_format');
+		
+		// get rid of EE formatted dates
+		if ($this->date_format && strstr($this->date_format, '%'))
+		{
+			$this->date_format = str_replace('%', '', $this->date_format);
+		}
+		
 		$this->jsonp = $this->EE->TMPL->fetch_param('jsonp') === 'yes';
 		
 		$this->EE->load->library('jsonp');
@@ -638,9 +635,69 @@ class Json
 		return $this->xhr && ! $this->EE->input->is_ajax_request();
 	}
 	
-	protected function respond($response)
+	/**
+	 * Alter the keys of a multidimensional array
+	 *
+	 * when camel_case flag is set, or if alternate key names are provied with the fields param
+	 * 
+	 * @param array   $arrays multidimensional array
+	 * 
+	 * @return array
+	 */
+	protected function clean_keys(array $arrays)
 	{
-		$response = ( ! is_string($response)) ? $this->EE->javascript->generate_json($response, TRUE) : $response;
+		$this->EE->load->helper('inflector');
+		
+		foreach ($arrays as $array)
+		{
+			foreach ($array as $key => $value)
+			{
+				$new_key = $key;
+				
+				if (isset($this->fields[$key]) && $key !== $this->fields[$key])
+				{
+					$new_key = $this->fields[$key];
+				}
+				
+				if ($this->camel_case)
+				{
+					$new_key = camelize($new_key);
+				}
+				
+				if ($new_key !== $key)
+				{
+					$array[$new_key] = $value;
+					
+					unset($array[$key]);
+				}
+			}
+		}
+		
+		return $array;
+	}
+	
+	protected function date_format($date)
+	{
+		if ( ! $date)
+		{
+			return NULL;
+		}
+		
+		return ($this->date_format) ? date($this->date_format, $date) : (int) ($date.'000');
+	}
+	
+	protected function respond(array $response, $callback = NULL)
+	{
+		$this->EE->load->library('javascript');
+		
+		$response = $this->clean_keys($response);
+		
+		$response = $this->EE->javascript->generate_json($response, TRUE);
+		
+		if ( ! is_null($callback))
+		{
+			$response = call_user_func($callback, $response);
+		}
 		
 		if ($this->check_xhr_required())
 		{
