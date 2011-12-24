@@ -47,6 +47,14 @@ class Json
 		if ($this->EE->TMPL->fetch_param('fields'))
 		{
 			$fields = explode('|', $this->EE->TMPL->fetch_param('fields'));
+
+			foreach($fields as $field)
+			{
+				$name = explode('=',$field);
+				$output_fields[$name[0]] = isset($name[1]) ? $name[1] : $name[0];
+			}
+
+			$fields = array_keys($fields);
 		}
 		
 		$sql = $this->entries_channel_sql();
@@ -160,6 +168,16 @@ class Json
 						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']]);
 					}
 				}
+
+				foreach($output_fields as $field_name => $output_name)
+				{
+					if($field_name != $output_name)
+					{
+						$entry[$output_name] = $entry[$field_name];
+						unset($entry[$field_name]);
+					}
+				}
+
 			}
 		}
 		
