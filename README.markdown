@@ -20,6 +20,10 @@ Set terminate to yes to terminate the template and output your json immediately,
 
 Specify which fields you wish to have in the array. Separate multiple fields by a pipe character. If you do not specify fields, you will get all of the default fields' data.
 
+	fields="entry_id=id|entry_date=start|title"
+
+To output different fieldnames for the json keys (id instead of entry_id) specify the fieldname as fieldname=keyname.
+
 	content_type="text/javascript"
 
 Set a custom Content-Type header. The default is "application/json", or "application/javascript" if using JSONP. Headers are only sent when terminate is set to "yes". 
