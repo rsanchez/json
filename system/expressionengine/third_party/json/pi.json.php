@@ -262,6 +262,8 @@ class Json
 						}
 					}
 				}
+
+				$entry['entry_id'] = (int) $entry['entry_id'];
 			}
 		}
 		
