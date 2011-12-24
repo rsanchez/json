@@ -248,6 +248,8 @@ class Json
 					}
 				}
 
+				$entry['entry_id'] = (int) $entry['entry_id'];
+
 				foreach($this->json_keys as $field_name => $json_key)
 				{
 					if($field_name != $json_key)
