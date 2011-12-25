@@ -648,7 +648,7 @@ class Json
 	{
 		$this->EE->load->helper('inflector');
 		
-		foreach ($arrays as $array)
+		foreach ($arrays as &$array)
 		{
 			foreach ($array as $key => $value)
 			{
@@ -673,7 +673,7 @@ class Json
 			}
 		}
 		
-		return $array;
+		return $arrays;
 	}
 	
 	protected function date_format($date)
