@@ -129,6 +129,17 @@ class Json
 					$this->EE->db->join('member_data md', 'm.member_id = md.member_id');
 				}
 				
+				if ($this->channel->display_by === 'week' && strpos($match[1], 'yearweek') !== FALSE)
+				{
+					$yearweek = TRUE;
+					
+					$offset = $this->EE->localize->zones[$this->EE->config->item('server_timezone')] * 3600;
+					
+					$format = ($this->EE->TMPL->fetch_param('start_day') === 'Monday') ? '%x%v' : '%X%V';
+					
+					$this->EE->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
+				}
+				
 				$this->EE->db->order_by($match[1]);
 			}
 			
@@ -136,6 +147,11 @@ class Json
 			
 			foreach ($this->entries as &$entry)
 			{
+				if (isset($yearweek))
+				{
+					unset($entry['yearweek']);
+				}
+				
 				if (isset($entry['entry_date']))
 				{
 					$entry['entry_date'] .= '000';
