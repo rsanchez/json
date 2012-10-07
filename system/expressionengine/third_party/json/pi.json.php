@@ -657,7 +657,7 @@ class Json
 		$this->EE->load->library('javascript');
 		
 		$response = function_exists('json_encode')
-			? json_encode($response, JSON_FORCE_OBJECT)
+			? json_encode($response)
 			: $this->EE->javascript->generate_json($response, TRUE);
 		
 		if ( ! is_null($callback))
