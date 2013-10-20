@@ -2,9 +2,9 @@
 
 $plugin_info = array(
 	'pi_name' => 'JSON',
-	'pi_version' => '1.0.2',
+	'pi_version' => '1.0.3',
 	'pi_author' => 'Rob Sanchez',
-	'pi_author_url' => 'http://barrettnewton.com/',
+	'pi_author_url' => 'https://github.com/rsanchez',
 	'pi_description' => 'Output ExpressionEngine data in JSON format.',
 	'pi_usage' => Json::usage()
 );
@@ -181,7 +181,7 @@ class Json
 		
 		$this->EE->load->library('javascript');
 		
-		$data = json_encode($this->entries, TRUE);
+		$data = json_encode($this->entries);
 		
 		$this->EE->load->library('typography');
 		
@@ -355,11 +355,15 @@ class Json
 			'm.total_forum_posts',
 			'm.language',
 			'm.timezone',
-			'm.daylight_savings',
 			'm.bday_d',
 			'm.bday_m',
 			'm.bday_y',
 		);
+
+		if (version_compare(APP_VER, '2.6', '<'))
+		{
+			$default_fields[] = 'm.daylight_savings';
+		}
 			
 		$custom_fields = $this->EE->db->select('m_field_id, m_field_name')
 						->from('member_fields')
@@ -445,7 +449,7 @@ class Json
 			return $this->EE->output->send_ajax_response($members);
 		}
 		
-		return $this->EE->javascript->generate_json($members, TRUE);
+		return json_encode($members);
 	}
 	
 	public static function usage()
