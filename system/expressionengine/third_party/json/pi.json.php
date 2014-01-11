@@ -529,18 +529,16 @@ class Json
 
 		if ($this->EE->api_channel_fields->check_method_exists('replace_tag'))
 		{
-			$TMPL = $this->EE->TMPL;
-
-			$this->EE->TMPL = new Json_Template();
+			$template = new Json_Template();
 
 			$field_data = $this->EE->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
 
-			if ($variables = $this->EE->session->cache('Json', 'variables'))
+			if ($template->variables)
 			{
-				$field_data = $variables;
+				$field_data = $template->variables;
 			}
 
-			$this->EE->TMPL = $TMPL;
+			unset($template);
 		}
 
 		$this->EE->load->remove_package_path($this->EE->api_channel_fields->ft_paths[$field['field_type']]);
@@ -921,22 +919,31 @@ class Json
 }
 
 class Json_Template extends EE_Template {
+	protected $TMPL;
+	public $variables;
+
 	public function __construct()
 	{
 		parent::__construct();
-		$this->EE->session->set_cache('Json', 'variables', FALSE);
+		$this->TMPL =& $this->EE->TMPL;
+		$this->EE->TMPL =& $this;
+	}
+
+	public function __destruct()
+	{
+		$this->EE->TMPL =& $this->TMPL;
 	}
 
 	public function parse_variables($tagdata, $variables, $enable_backspace = TRUE)
 	{
 		$output = parent::parse_variables($tagdata, $variables, $enable_backspace);
-		$this->EE->session->set_cache('Json', 'variables', $variables);
+		$this->variables = $variables;
 		return $output;
 	}
 
 	public function parse_variables_row($tagdata, $variables, $solo = TRUE)
 	{
-		$this->EE->session->set_cache('Json', 'variables', $variables);
+		$this->variables = $variables;
 		return parent::parse_variables_row($tagdata, $variables, $solo);
 	}
 }
