@@ -31,6 +31,7 @@ class Json
 	public $entries_custom_fields;
 	protected $entries_matrix_rows;
 	protected $entries_matrix_cols;
+	protected $entries_rel_data;
 	protected $entries_relationship_data;
 
 	public function __construct()
@@ -351,28 +352,63 @@ class Json
 
 	protected function entries_rel($entry_id, $field, $field_data)
 	{
-		if (is_null($this->entries_relationship_data))
+		if (is_null($this->entries_rel_data))
 		{
 			$query = $this->EE->db->select('rel_child_id, rel_id')
 					      ->where('rel_parent_id', $entry_id)
 					      ->get('relationships');
 			
-			$this->entries_relationship_data = array();
+			$this->entries_rel_data = array();
 			
 			foreach ($query->result() as $row)
 			{
-				$this->entries_relationship_data[$row->rel_id] = $row->rel_child_id;
+				$this->entries_rel_data[$row->rel_id] = (int) $row->rel_child_id;
 			}
 			
 			$query->free_result();
 		}
 		
-		if ( ! isset($this->entries_relationship_data[$field_data]))
+		if ( ! isset($this->entries_rel_data[$field_data]))
 		{
 			return NULL;
 		}
 		
-		return $this->entries_relationship_data[$field_data];
+		return $this->entries_rel_data[$field_data];
+	}
+
+	protected function entries_relationship($entry_id, $field, $field_data)
+	{
+		if (is_null($this->entries_relationship_data))
+		{
+			$query = $this->EE->db->select('parent_id, child_id, field_id')
+					      ->where_in('parent_id', $this->entries_entry_ids)
+					      ->order_by('order', 'asc')
+					      ->get('relationships');
+			
+			foreach ($query->result_array() as $row)
+			{
+				if ( ! isset($this->entries_relationship_data[$row['parent_id']]))
+				{
+					$this->entries_relationship_data[$row['parent_id']] = array();
+				}
+
+				if ( ! isset($this->entries_relationship_data[$row['parent_id']][$row['field_id']]))
+				{
+					$this->entries_relationship_data[$row['parent_id']][$row['field_id']] = array();
+				}
+
+				$this->entries_relationship_data[$row['parent_id']][$row['field_id']][] = (int) $row['child_id'];
+			}
+			
+			$query->free_result();
+		}
+
+		if (isset($this->entries_relationship_data[$entry_id][$field['field_id']]))
+		{
+			return $this->entries_relationship_data[$entry_id][$field['field_id']];
+		}
+
+		return array();
 	}
 	
 	protected function entries_date($entry_id, $field, $field_data)
@@ -633,6 +669,7 @@ class Json
 				$this->entries_entry_ids = array();
 				$this->entries_custom_fields = array();
 				$this->entries_matrix_rows = NULL;
+				$this->entries_rel_data = NULL;
 				$this->entries_relationship_data = NULL;
 				break;
 		}
