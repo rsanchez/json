@@ -98,6 +98,7 @@ class Json
 			$this->entries_custom_fields = $this->EE->db->select('channel_fields.*, channels.channel_id')
 								    ->from('channel_fields')
 								    ->join('channels', 'channel_fields.group_id = channels.field_group')
+								    ->where('channels.site_id', $this->EE->config->item('site_id'))
 								    ->where_in('channels.channel_name', explode('|', $this->EE->TMPL->fetch_param('channel')))
 								    ->get()
 								    ->result_array();
