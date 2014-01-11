@@ -246,8 +246,8 @@ class Json
 							}
 							
 							$category = array(
-								'category_id' => $raw_category[0],
-								'parent_id' => $raw_category[1],
+								'category_id' => (int) $raw_category[0],
+								'parent_id' => (int) $raw_category[1],
 								'category_name' => $raw_category[2],
 								'category_image' => $raw_category[3],
 								'category_description' => $raw_category[4],
@@ -266,6 +266,16 @@ class Json
 				}
 
 				$entry['entry_id'] = (int) $entry['entry_id'];
+
+				if (isset($entry['channel_id']))
+				{
+					$entry['channel_id'] = (int) $entry['channel_id'];
+				}
+
+				if (isset($entry['author_id']))
+				{
+					$entry['author_id'] = (int) $entry['author_id'];
+				}
 			}
 		}
 		
