@@ -293,8 +293,21 @@ class Json
 			$query = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
 					      ->order_by('row_order')
 					      ->get('matrix_data');
-			
-			$this->entries_matrix_rows = $query->result_array();
+
+			foreach ($query->result_array() as $row)
+			{
+				if ( ! isset($this->entries_matrix_rows[$row['entry_id']]))
+				{
+					$this->entries_matrix_rows[$row['entry_id']] = array();
+				}
+
+				if ( ! isset($this->entries_matrix_rows[$row['entry_id']][$row['field_id']]))
+				{
+					$this->entries_matrix_rows[$row['entry_id']][$row['field_id']] = array();
+				}
+
+				$this->entries_matrix_rows[$row['entry_id']][$row['field_id']][] = $row;
+			}
 			
 			$query->free_result();
 		}
@@ -310,17 +323,17 @@ class Json
 			
 			$query->free_result();
 		}
-		
+
 		$data = array();
-		
-		foreach ($this->entries_matrix_rows as &$matrix_row)
+
+		if (isset($this->entries_matrix_rows[$entry_id][$field['field_id']]))
 		{
-			if ($matrix_row['entry_id'] == $entry_id && $matrix_row['field_id'] == $field['field_id'])
+			$field_settings = unserialize(base64_decode($field['field_settings']));
+
+			foreach ($this->entries_matrix_rows[$entry_id][$field['field_id']] as $matrix_row)
 			{
-				$field_settings = unserialize(base64_decode($field['field_settings']));
-				
-				$row = array('row_id' => $matrix_row['row_id']);
-				
+				$row = array('row_id' => (int) $matrix_row['row_id']);
+
 				foreach ($field_settings['col_ids'] as $col_id)
 				{
 					if (isset($this->entries_matrix_cols[$col_id]))
