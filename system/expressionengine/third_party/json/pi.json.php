@@ -31,6 +31,8 @@ class Json
 	public $entries_custom_fields;
 	protected $entries_matrix_rows;
 	protected $entries_matrix_cols;
+	protected $entries_grid_rows;
+	protected $entries_grid_cols;
 	protected $entries_rel_data;
 	protected $entries_relationship_data;
 	protected $entries_playa_data;
@@ -343,7 +345,66 @@ class Json
 						$row[$this->entries_matrix_cols[$col_id]['col_name']] = $matrix_row['col_id_'.$col_id];
 					}
 				}
+
+				$data[] = $row;
+			}
+		}
+		
+		return $data;
+	}
+	
+	protected function entries_grid($entry_id, $field, $field_data)
+	{
+		if ( ! isset($this->entries_grid_rows[$field['field_id']]))
+		{
+			$query = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
+					      ->order_by('row_order')
+					      ->get('channel_grid_field_'.$field['field_id']);
+
+			foreach ($query->result_array() as $row)
+			{
+				if ( ! isset($this->entries_grid_rows[$field['field_id']][$row['entry_id']]))
+				{
+					$this->entries_grid_rows[$field['field_id']][$row['entry_id']] = array();
+				}
+
+				$this->entries_grid_rows[$field['field_id']][$row['entry_id']][] = $row;
+			}
+			
+			$query->free_result();
+		}
+		
+		if (is_null($this->entries_grid_cols))
+		{
+			$query = $this->EE->db->order_by('col_order', 'ASC')
+														->get('grid_columns');
+			
+			foreach ($query->result_array() as $row)
+			{
+				if ( ! isset($this->entries_grid_cols[$row['field_id']]))
+				{
+					$this->entries_grid_cols[$row['field_id']] = array();
+				}
 				
+				$this->entries_grid_cols[$row['field_id']][$row['col_id']] = $row;
+			}
+			
+			$query->free_result();
+		}
+
+		$data = array();
+
+		if (isset($this->entries_grid_rows[$field['field_id']][$entry_id]) && isset($this->entries_grid_cols[$field['field_id']]))
+		{
+			foreach ($this->entries_grid_rows[$field['field_id']][$entry_id] as $grid_row)
+			{
+				$row = array('row_id' => (int) $grid_row['row_id']);
+
+				foreach ($this->entries_grid_cols[$field['field_id']] as $col_id => $col)
+				{
+					$row[$col['col_name']] = $grid_row['col_id_'.$col_id];
+				}
+
 				$data[] = $row;
 			}
 		}
