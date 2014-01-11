@@ -33,6 +33,7 @@ class Json
 	protected $entries_matrix_cols;
 	protected $entries_rel_data;
 	protected $entries_relationship_data;
+	protected $entries_playa_data;
 
 	public function __construct()
 	{
@@ -410,6 +411,41 @@ class Json
 
 		return array();
 	}
+
+	protected function entries_playa($entry_id, $field, $field_data)
+	{
+		if (is_null($this->entries_playa_data))
+		{
+			$query = $this->EE->db->select('parent_entry_id, child_entry_id, parent_field_id')
+					      ->where_in('parent_entry_id', $this->entries_entry_ids)
+					      ->order_by('rel_order', 'asc')
+					      ->get('playa_relationships');
+			
+			foreach ($query->result_array() as $row)
+			{
+				if ( ! isset($this->entries_playa_data[$row['parent_entry_id']]))
+				{
+					$this->entries_playa_data[$row['parent_entry_id']] = array();
+				}
+
+				if ( ! isset($this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']]))
+				{
+					$this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']] = array();
+				}
+
+				$this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']][] = (int) $row['child_entry_id'];
+			}
+			
+			$query->free_result();
+		}
+
+		if (isset($this->entries_playa_data[$entry_id][$field['field_id']]))
+		{
+			return $this->entries_playa_data[$entry_id][$field['field_id']];
+		}
+
+		return array();
+	}
 	
 	protected function entries_date($entry_id, $field, $field_data)
 	{
@@ -671,6 +707,7 @@ class Json
 				$this->entries_matrix_rows = NULL;
 				$this->entries_rel_data = NULL;
 				$this->entries_relationship_data = NULL;
+				$this->entries_playa_data = NULL;
 				break;
 		}
 		
