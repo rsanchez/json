@@ -76,6 +76,72 @@ This will add categories to the entries response
 
 When paired with show_categories="yes", this will display only categories from the specified groups.
 
+#### json:entries Custom Fields
+
+Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data.
+
+##### Matrix
+
+The data will include an array of Matrix rows, including the row_id and the column names:
+
+```
+your_matrix_field: [
+  {
+    row_id: 1,
+    my_col_name: "foo",
+    other_col_name: "bar"
+  },
+  {
+    row_id: 2,
+    my_col_name: "baz",
+    other_col_name: "qux"
+  }
+]
+```
+
+##### Grid
+
+The data will include an array of Grid rows, including the row_id and the column names:
+
+```
+your_grid_field: [
+  {
+    row_id: 1,
+    my_col_name: "foo",
+    other_col_name: "bar"
+  },
+  {
+    row_id: 2,
+    my_col_name: "baz",
+    other_col_name: "qux"
+  }
+]
+```
+
+##### Relationships
+
+The data will include an array of related entry IDs:
+
+```
+your_relationships_field: [1, 2]
+```
+
+##### Playa
+
+The data will include an array of related entry IDs:
+
+```
+your_playa_field: [1, 2]
+```
+
+##### Date
+
+The data will be the Unix timestamp, accurate to milliseconds. This is because the native JavaScript Date object accepts a millisecond-based timestamp in its constructor.
+
+```
+your_date_field: 1385661660000
+```
+
 ## json:search
 
 	{exp:json:search search_id="{segment_3}"}
