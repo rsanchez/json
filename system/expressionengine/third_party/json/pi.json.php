@@ -232,7 +232,7 @@ class Json
 					//call our custom callback for this fieldtype if it exists
 					if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
 					{
-						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']]);
+						$entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
 					}
 				}
 				
@@ -511,6 +511,82 @@ class Json
 	protected function entries_date($entry_id, $field, $field_data)
 	{
 		return $this->date_format($field_data);
+	}
+
+	protected function entries_custom_field($entry_id, $field, $field_data, $entry, $tagdata = ' ')
+	{
+		$this->EE->load->add_package_path($this->EE->api_channel_fields->ft_paths[$field['field_type']], FALSE);
+
+		$this->EE->api_channel_fields->setup_handler($field['field_id']);
+
+		$this->EE->api_channel_fields->apply('_init', array(array(
+			'row' => $entry,
+			'content_id' => $entry['entry_id'],
+			'content_type' => 'channel',
+		)));
+
+		$field_data = $this->EE->api_channel_fields->apply('pre_process', array($field_data));
+
+		if ($this->EE->api_channel_fields->check_method_exists('replace_tag'))
+		{
+			$TMPL = $this->EE->TMPL;
+
+			$this->EE->TMPL = new Json_Template();
+
+			$field_data = $this->EE->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
+
+			if ($variables = $this->EE->session->cache('Json', 'variables'))
+			{
+				$field_data = $variables;
+			}
+
+			$this->EE->TMPL = $TMPL;
+		}
+
+		$this->EE->load->remove_package_path($this->EE->api_channel_fields->ft_paths[$field['field_type']]);
+
+		return $field_data;
+	}
+
+	protected function entries_assets($entry_id, $field, $field_data, $entry)
+	{
+		$field_data = $this->entries_custom_field($entry_id, $field, $field_data, $entry);
+
+		if ( ! is_array($field_data))
+		{
+			$field_data = array();
+		}
+
+		$fields = array(
+			'file_id',
+			'url',
+			'subfolder',
+			'filename',
+			'extension',
+			'date_modified',
+			'kind',
+			'width',
+			'height',
+			'size',
+			'title',
+			'date',
+			'alt_text',
+			'caption',
+			'author',
+			'desc',
+			'location',
+		);
+
+		foreach ($field_data as &$row)
+		{
+			//excise any other fields from this row
+			$row = array_intersect_key($row, array_flip($fields));
+			$row['file_id'] = (int) $row['file_id'];
+			$row['date'] = $this->date_format($row['date']);
+			$row['date_modified'] = $this->date_format($row['date_modified']);
+		}
+
+		return $field_data;
 	}
 	
 	public function search()
@@ -841,6 +917,27 @@ class Json
 		}
 		
 		return $response;
+	}
+}
+
+class Json_Template extends EE_Template {
+	public function __construct()
+	{
+		parent::__construct();
+		$this->EE->session->set_cache('Json', 'variables', FALSE);
+	}
+
+	public function parse_variables($tagdata, $variables, $enable_backspace = TRUE)
+	{
+		$output = parent::parse_variables($tagdata, $variables, $enable_backspace);
+		$this->EE->session->set_cache('Json', 'variables', $variables);
+		return $output;
+	}
+
+	public function parse_variables_row($tagdata, $variables, $solo = TRUE)
+	{
+		$this->EE->session->set_cache('Json', 'variables', $variables);
+		return parent::parse_variables_row($tagdata, $variables, $solo);
 	}
 }
 /* End of file pi.json.php */ 
