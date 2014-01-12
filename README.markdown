@@ -290,3 +290,8 @@ The request:
 	function yourCallbackFunction(data) {
 		console.log(data);
 	}
+
+## Upgrading from 1.0.x
+
+- IDs (entry_id, author_id, etc.) and Dates are returned as integers
+- The following fieldtypes have different output: Playa, Assets. Please see docs above for an example of their output.
