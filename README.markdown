@@ -291,6 +291,18 @@ The request:
 		console.log(data);
 	}
 
+## Changelog
+
+### v1.1.0
+
+- Added support for the following fieldtypes: Assets, Grid, Playa, Relationships
+- Change IDs (entry_id, author_id, etc.) and Dates to integers
+- Added `show_categories` and `show_category_group` parameters to `{exp:json:entries}`
+- Added `{exp:json:search}`
+- Added JSONP support
+- Added `date_format` parameter
+- Added `content_type` parameter
+
 ## Upgrading from 1.0.x
 
 - IDs (entry_id, author_id, etc.) and Dates are returned as integers
