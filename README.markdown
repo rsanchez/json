@@ -2,6 +2,12 @@
 
 Output ExpressionEngine data in JSON format.
 
+## Requirements
+
+- ExpressionEngine 2.6+
+
+For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/tree/v1.0.3).
+
 ## Installation
 
 * Copy the /system/expressionengine/third_party/json/ folder to your /system/expressionengine/third_party/ folder

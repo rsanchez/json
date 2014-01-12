@@ -36,11 +36,6 @@ class Json
   protected $entries_rel_data;
   protected $entries_relationship_data;
   protected $entries_playa_data;
-
-  public function __construct()
-  {
-    $this->EE =& get_instance();
-  }
   
   public function entries()
   {
@@ -72,7 +67,7 @@ class Json
 
     $save_cache = FALSE;
 
-    if ($this->EE->config->item('enable_sql_caching') == 'y')
+    if (ee()->config->item('enable_sql_caching') == 'y')
     {
       if (FALSE == ($this->channel->sql = $this->channel->fetch_cache()))
       {
@@ -80,7 +75,7 @@ class Json
       }
       else
       {
-        if ($this->EE->TMPL->fetch_param('dynamic') != 'no')
+        if (ee()->TMPL->fetch_param('dynamic') != 'no')
         {
           if (preg_match("#(^|\/)C(\d+)#", $this->channel->query_string, $match) OR in_array($this->channel->reserved_cat_segment, explode("/", $this->channel->query_string)))
           {
@@ -99,13 +94,13 @@ class Json
     {
       $this->entries_entry_ids = explode(',', $match[1]);
       
-      $this->entries_custom_fields = $this->EE->db->select('channel_fields.*, channels.channel_id')
-                                                  ->from('channel_fields')
-                                                  ->join('channels', 'channel_fields.group_id = channels.field_group')
-                                                  ->where('channels.site_id', $this->EE->config->item('site_id'))
-                                                  ->where_in('channels.channel_name', explode('|', $this->EE->TMPL->fetch_param('channel')))
-                                                  ->get()
-                                                  ->result_array();
+      $this->entries_custom_fields = ee()->db->select('channel_fields.*, channels.channel_id')
+                                             ->from('channel_fields')
+                                             ->join('channels', 'channel_fields.group_id = channels.field_group')
+                                             ->where('channels.site_id', ee()->config->item('site_id'))
+                                             ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
+                                             ->get()
+                                             ->result_array();
       
       $default_fields = array(
         't.title',
@@ -142,7 +137,7 @@ class Json
       {
         if (empty($this->fields) || array_key_exists($field['field_name'], $this->fields))
         {
-          $select[] = 'wd.'.$this->EE->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.$this->EE->db->protect_identifiers($field['field_name']);
+          $select[] = 'wd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
         }
       }
       
@@ -152,51 +147,51 @@ class Json
         $select[] = 't.entry_id';
       }
       
-      $this->EE->db->select(implode(', ', $select), FALSE)
-                   ->from('channel_titles t')
-                   ->join('channel_data wd', 't.entry_id = wd.entry_id')
-                   ->where_in('t.entry_id', $this->entries_entry_ids);
+      ee()->db->select(implode(', ', $select), FALSE)
+              ->from('channel_titles t')
+              ->join('channel_data wd', 't.entry_id = wd.entry_id')
+              ->where_in('t.entry_id', $this->entries_entry_ids);
       
       if (preg_match('/ORDER BY (.*)?/', $this->channel->sql, $match))
       {
         if (strpos($match[1], 'w.') !== FALSE)
         {
-          $this->EE->db->join('channels w', 't.channel_id = w.channel_id');
+          ee()->db->join('channels w', 't.channel_id = w.channel_id');
         }
         
         if (strpos($match[1], 'm.') !== FALSE)
         {
-          $this->EE->db->join('members m', 'm.member_id = t.author_id');
+          ee()->db->join('members m', 'm.member_id = t.author_id');
         }
         
         if (strpos($match[1], 'md.') !== FALSE)
         {
-          $this->EE->db->join('member_data md', 'm.member_id = md.member_id');
+          ee()->db->join('member_data md', 'm.member_id = md.member_id');
         }
         
         if ($this->channel->display_by === 'week' && strpos($match[1], 'yearweek') !== FALSE)
         {
           $yearweek = TRUE;
           
-          $offset = $this->EE->localize->zones[$this->EE->config->item('server_timezone')] * 3600;
+          $offset = ee()->localize->zones[ee()->config->item('server_timezone')] * 3600;
           
-          $format = ($this->EE->TMPL->fetch_param('start_day') === 'Monday') ? '%x%v' : '%X%V';
+          $format = (ee()->TMPL->fetch_param('start_day') === 'Monday') ? '%x%v' : '%X%V';
           
-          $this->EE->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
+          ee()->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
         }
         
-        $this->EE->db->order_by($match[1]);
+        ee()->db->order_by($match[1]);
       }
       
-      $query = $this->channel->query = $this->EE->db->get();
+      $query = $this->channel->query = ee()->db->get();
       
-      if ($this->EE->TMPL->fetch_param('show_categories') === 'yes')
+      if (ee()->TMPL->fetch_param('show_categories') === 'yes')
       {
         $this->channel->fetch_categories();
         
-        if ($this->EE->TMPL->fetch_param('show_category_group'))
+        if (ee()->TMPL->fetch_param('show_category_group'))
         {
-          $show_category_group = explode('|', $this->EE->TMPL->fetch_param('show_category_group'));
+          $show_category_group = explode('|', ee()->TMPL->fetch_param('show_category_group'));
         }
       }
       
@@ -236,7 +231,7 @@ class Json
           }
         }
         
-        if ($this->EE->TMPL->fetch_param('show_categories') === 'yes')
+        if (ee()->TMPL->fetch_param('show_categories') === 'yes')
         {
           $entry['categories'] = array();
           
@@ -283,20 +278,20 @@ class Json
       }
     }
     
-    $this->EE->load->library('javascript');
+    ee()->load->library('javascript');
     
-    $this->EE->load->library('typography');
+    ee()->load->library('typography');
     
-    return $this->respond($this->entries, array($this->EE->typography, 'parse_file_paths'));
+    return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
   
   protected function entries_matrix($entry_id, $field, $field_data)
   {
     if (is_null($this->entries_matrix_rows))
     {
-      $query = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
-                            ->order_by('row_order')
-                            ->get('matrix_data');
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+                       ->order_by('row_order')
+                       ->get('matrix_data');
 
       foreach ($query->result_array() as $row)
       {
@@ -318,7 +313,7 @@ class Json
     
     if (is_null($this->entries_matrix_cols))
     {
-      $query = $this->EE->db->get('matrix_cols');
+      $query = ee()->db->get('matrix_cols');
       
       foreach ($query->result_array() as $row)
       {
@@ -357,9 +352,9 @@ class Json
   {
     if ( ! isset($this->entries_grid_rows[$field['field_id']]))
     {
-      $query = $this->EE->db->where_in('entry_id', $this->entries_entry_ids)
-                            ->order_by('row_order')
-                            ->get('channel_grid_field_'.$field['field_id']);
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+                       ->order_by('row_order')
+                       ->get('channel_grid_field_'.$field['field_id']);
 
       foreach ($query->result_array() as $row)
       {
@@ -376,8 +371,8 @@ class Json
     
     if (is_null($this->entries_grid_cols))
     {
-      $query = $this->EE->db->order_by('col_order', 'ASC')
-                            ->get('grid_columns');
+      $query = ee()->db->order_by('col_order', 'ASC')
+                       ->get('grid_columns');
       
       foreach ($query->result_array() as $row)
       {
@@ -416,9 +411,9 @@ class Json
   {
     if (is_null($this->entries_rel_data))
     {
-      $query = $this->EE->db->select('rel_child_id, rel_id')
-                            ->where('rel_parent_id', $entry_id)
-                            ->get('relationships');
+      $query = ee()->db->select('rel_child_id, rel_id')
+                       ->where('rel_parent_id', $entry_id)
+                       ->get('relationships');
       
       $this->entries_rel_data = array();
       
@@ -442,10 +437,10 @@ class Json
   {
     if (is_null($this->entries_relationship_data))
     {
-      $query = $this->EE->db->select('parent_id, child_id, field_id')
-                            ->where_in('parent_id', $this->entries_entry_ids)
-                            ->order_by('order', 'asc')
-                            ->get('relationships');
+      $query = ee()->db->select('parent_id, child_id, field_id')
+                       ->where_in('parent_id', $this->entries_entry_ids)
+                       ->order_by('order', 'asc')
+                       ->get('relationships');
       
       foreach ($query->result_array() as $row)
       {
@@ -477,10 +472,10 @@ class Json
   {
     if (is_null($this->entries_playa_data))
     {
-      $query = $this->EE->db->select('parent_entry_id, child_entry_id, parent_field_id')
-                            ->where_in('parent_entry_id', $this->entries_entry_ids)
-                            ->order_by('rel_order', 'asc')
-                            ->get('playa_relationships');
+      $query = ee()->db->select('parent_entry_id, child_entry_id, parent_field_id')
+                       ->where_in('parent_entry_id', $this->entries_entry_ids)
+                       ->order_by('rel_order', 'asc')
+                       ->get('playa_relationships');
       
       foreach ($query->result_array() as $row)
       {
@@ -515,23 +510,23 @@ class Json
 
   protected function entries_custom_field($entry_id, $field, $field_data, $entry, $tagdata = ' ')
   {
-    $this->EE->load->add_package_path($this->EE->api_channel_fields->ft_paths[$field['field_type']], FALSE);
+    ee()->load->add_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']], FALSE);
 
-    $this->EE->api_channel_fields->setup_handler($field['field_id']);
+    ee()->api_channel_fields->setup_handler($field['field_id']);
 
-    $this->EE->api_channel_fields->apply('_init', array(array(
+    ee()->api_channel_fields->apply('_init', array(array(
       'row' => $entry,
       'content_id' => $entry['entry_id'],
       'content_type' => 'channel',
     )));
 
-    $field_data = $this->EE->api_channel_fields->apply('pre_process', array($field_data));
+    $field_data = ee()->api_channel_fields->apply('pre_process', array($field_data));
 
-    if ($this->EE->api_channel_fields->check_method_exists('replace_tag'))
+    if (ee()->api_channel_fields->check_method_exists('replace_tag'))
     {
       $template = new Json_Template();
 
-      $field_data = $this->EE->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
+      $field_data = ee()->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
 
       if ($template->variables)
       {
@@ -541,7 +536,7 @@ class Json
       unset($template);
     }
 
-    $this->EE->load->remove_package_path($this->EE->api_channel_fields->ft_paths[$field['field_type']]);
+    ee()->load->remove_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']]);
 
     return $field_data;
   }
@@ -589,18 +584,18 @@ class Json
   
   public function search()
   {
-    $search_id = $this->EE->TMPL->fetch_param('search_id');
+    $search_id = ee()->TMPL->fetch_param('search_id');
     
     if ( ! $search_id)
     {
-      $search_id = end($this->EE->uri->segment_array());
+      $search_id = end(ee()->uri->segment_array());
     }
         
     if ($search_id)
     {
-      $query = $this->EE->db->where('search_id', $search_id)
-                            ->limit(1)
-                            ->get('exp_search');
+      $query = ee()->db->where('search_id', $search_id)
+                       ->limit(1)
+                       ->get('exp_search');
       
       if ($query->num_rows() > 0)
       {
@@ -610,7 +605,7 @@ class Json
         
         if (preg_match('/IN \(([\d,]+)\)/', $query->row('query'), $match))
         {
-          $this->EE->TMPL->tagparams['entry_id'] = (strpos($match[1], ',') !== FALSE) ? str_replace(',', '|', $match[1]) : $match[1];
+          ee()->TMPL->tagparams['entry_id'] = (strpos($match[1], ',') !== FALSE) ? str_replace(',', '|', $match[1]) : $match[1];
           
           return $this->entries();
         }
@@ -637,10 +632,10 @@ class Json
     
     if (is_null($params))
     {
-      $params = $this->EE->TMPL->tagparams;
+      $params = ee()->TMPL->tagparams;
     }
     
-    $this->EE->load->helper('array');
+    ee()->load->helper('array');
     
     $channel = element('channel', $params);
     $group_id = element('group_id', $params, element('category_group', $params));
@@ -652,41 +647,41 @@ class Json
     
     if ($channel)
     {
-      $this->EE->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
-      $this->EE->db->join('channels', 'channels.channel_id = channel_titles.channel_id');
-      $this->EE->db->where_in('channels.channel_name', explode('|', $channel));
+      ee()->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
+      ee()->db->join('channels', 'channels.channel_id = channel_titles.channel_id');
+      ee()->db->where_in('channels.channel_name', explode('|', $channel));
       $joins[] = 'channels';
       $joins[] = 'channel_titles';
     }
     
     if ($group_id)
     {
-      $this->EE->db->where_in('categories.group_id', explode('|', $group_id));
+      ee()->db->where_in('categories.group_id', explode('|', $group_id));
     }
     
     if ($cat_id)
     {
-      $this->EE->db->where_in('categories.cat_id', explode('|', $cat_id));
+      ee()->db->where_in('categories.cat_id', explode('|', $cat_id));
     }
     
     if ($status)
     {
       if ( ! in_array('channel_titles', $joins))
       {
-        $this->EE->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
+        ee()->db->join('channel_titles', 'channel_titles.entry_id = category_posts.entry_id');
       }
       
-      $this->EE->db->where_in('channel_titles.status', explode('|', $status));
+      ee()->db->where_in('channel_titles.status', explode('|', $status));
     }
     
     if ($parent_only)
     {
-      $this->EE->db->where('categories.parent_id', 0);
+      ee()->db->where('categories.parent_id', 0);
     }
     
     if ($show_empty)
     {
-      $this->EE->db->where('count >', 0);
+      ee()->db->where('count >', 0);
     }
   }
   
@@ -744,8 +739,8 @@ class Json
       $default_fields[] = 'm.daylight_savings';
     }
       
-    $query = $this->EE->db->select('m_field_id, m_field_name')
-                          ->get('member_fields');
+    $query = ee()->db->select('m_field_id, m_field_name')
+                     ->get('member_fields');
     
     $custom_fields = $query->result_array();
     
@@ -774,34 +769,34 @@ class Json
     {
       if (empty($this->fields) || array_key_exists($field['m_field_name'], $this->fields))
       {
-        $select[] = 'd.'.$this->EE->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.$this->EE->db->protect_identifiers($field['m_field_name']);
+        $select[] = 'd.'.ee()->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.ee()->db->protect_identifiers($field['m_field_name']);
       }
     }
     
-    $this->EE->db->select(implode(', ', $select), FALSE)
-                 ->from('members m')
-                 ->join('member_data d', 'm.member_id = d.member_id');
+    ee()->db->select(implode(', ', $select), FALSE)
+            ->from('members m')
+            ->join('member_data d', 'm.member_id = d.member_id');
     
-    if ($this->EE->TMPL->fetch_param('member_id'))
+    if (ee()->TMPL->fetch_param('member_id'))
     {
-      $this->EE->db->where_in('m.member_id', explode('|', $this->EE->TMPL->fetch_param('member_id')));
+      ee()->db->where_in('m.member_id', explode('|', ee()->TMPL->fetch_param('member_id')));
     }
-    else if ($this->EE->TMPL->fetch_param('username'))
+    else if (ee()->TMPL->fetch_param('username'))
     {
-      $this->EE->db->where_in('m.member_id', explode('|', $this->EE->TMPL->fetch_param('member_id')));
-    }
-    
-    if ($this->EE->TMPL->fetch_param('group_id'))
-    {
-      $this->EE->db->where_in('m.group_id', explode('|', $this->EE->TMPL->fetch_param('group_id')));
+      ee()->db->where_in('m.member_id', explode('|', ee()->TMPL->fetch_param('member_id')));
     }
     
-    if ($this->EE->TMPL->fetch_param('limit'))
+    if (ee()->TMPL->fetch_param('group_id'))
     {
-      $this->EE->db->limit($this->EE->TMPL->fetch_param('limit'));
+      ee()->db->where_in('m.group_id', explode('|', ee()->TMPL->fetch_param('group_id')));
     }
     
-    $query = $this->EE->db->get();
+    if (ee()->TMPL->fetch_param('limit'))
+    {
+      ee()->db->limit(ee()->TMPL->fetch_param('limit'));
+    }
+    
+    $query = ee()->db->get();
     
     $members = $query->result_array();
     
@@ -846,13 +841,13 @@ class Json
         break;
     }
     
-    $this->xhr = $this->EE->TMPL->fetch_param('xhr') === 'yes';
+    $this->xhr = ee()->TMPL->fetch_param('xhr') === 'yes';
     
-    $this->terminate = $this->EE->TMPL->fetch_param('terminate') === 'yes';
+    $this->terminate = ee()->TMPL->fetch_param('terminate') === 'yes';
     
-    $this->fields = ($this->EE->TMPL->fetch_param('fields')) ? explode('|', $this->EE->TMPL->fetch_param('fields')) : array();
+    $this->fields = (ee()->TMPL->fetch_param('fields')) ? explode('|', ee()->TMPL->fetch_param('fields')) : array();
     
-    $this->date_format = $this->EE->TMPL->fetch_param('date_format');
+    $this->date_format = ee()->TMPL->fetch_param('date_format');
     
     // get rid of EE formatted dates
     if ($this->date_format && strstr($this->date_format, '%'))
@@ -860,19 +855,19 @@ class Json
       $this->date_format = str_replace('%', '', $this->date_format);
     }
     
-    $this->jsonp = $this->EE->TMPL->fetch_param('jsonp') === 'yes';
+    $this->jsonp = ee()->TMPL->fetch_param('jsonp') === 'yes';
     
-    $this->EE->load->library('jsonp');
+    ee()->load->library('jsonp');
     
-    $this->callback = ($this->EE->TMPL->fetch_param('callback') && $this->EE->jsonp->isValidCallback($this->EE->TMPL->fetch_param('callback')))
-          ? $this->EE->TMPL->fetch_param('callback') : NULL;
+    $this->callback = (ee()->TMPL->fetch_param('callback') && ee()->jsonp->isValidCallback(ee()->TMPL->fetch_param('callback')))
+          ? ee()->TMPL->fetch_param('callback') : NULL;
     
-    $this->content_type = $this->EE->TMPL->fetch_param('content_type', ($this->jsonp && $this->callback) ? 'application/javascript' : 'application/json');
+    $this->content_type = ee()->TMPL->fetch_param('content_type', ($this->jsonp && $this->callback) ? 'application/javascript' : 'application/json');
   }
   
   protected function check_xhr_required()
   {
-    return $this->xhr && ! $this->EE->input->is_ajax_request();
+    return $this->xhr && ! ee()->input->is_ajax_request();
   }
   
   protected function date_format($date)
@@ -887,11 +882,11 @@ class Json
   
   protected function respond(array $response, $callback = NULL)
   {
-    $this->EE->load->library('javascript');
+    ee()->load->library('javascript');
     
     $response = function_exists('json_encode')
       ? json_encode($response)
-      : $this->EE->javascript->generate_json($response, TRUE);
+      : ee()->javascript->generate_json($response, TRUE);
     
     if ( ! is_null($callback))
     {
@@ -925,13 +920,13 @@ class Json_Template extends EE_Template {
   public function __construct()
   {
     parent::__construct();
-    $this->TMPL =& $this->EE->TMPL;
-    $this->EE->TMPL =& $this;
+    $this->TMPL =& ee()->TMPL;
+    ee()->TMPL =& $this;
   }
 
   public function __destruct()
   {
-    $this->EE->TMPL =& $this->TMPL;
+    ee()->TMPL =& $this->TMPL;
   }
 
   public function parse_variables($tagdata, $variables, $enable_backspace = TRUE)
