@@ -134,6 +134,51 @@ The data will include an array of related entry IDs:
 your_playa_field: [1, 2]
 ```
 
+##### Assets
+
+```
+your_assets_field: [
+	{
+		"file_id": 1,
+		"url": "http://yoursite.com/uploads/flower.jpg",
+		"subfolder": "",
+		"filename": "flower",
+		"extension": "jpg",
+		"date_modified": 1389459034000,
+		"kind": "image",
+		"width": "300",
+		"height": "300",
+		"size": "65 KB",
+		"title": null,
+		"date": 1389459034000,
+		"alt_text": null,
+		"caption": null,
+		"author": null,
+		"desc": null,
+		"location": null
+	},
+	{
+		"file_id": 2,
+		"url": "http://yoursite.com/uploads/dog.jpg",
+		"subfolder": "",
+		"filename": "dog",
+		"extension": "jpg",
+		"date_modified": 1389466147000,
+		"kind": "image",
+		"width": "300",
+		"height": "300",
+		"size": "75 KB",
+		"title": null,
+		"date": 1389466147000,
+		"alt_text": null,
+		"caption": null,
+		"author": null,
+		"desc": null,
+		"location": null
+	}
+]
+```
+
 ##### Date
 
 The data will be the Unix timestamp, accurate to milliseconds. This is because the native JavaScript Date object accepts a millisecond-based timestamp in its constructor.
