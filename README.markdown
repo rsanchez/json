@@ -293,6 +293,11 @@ The request:
 
 ## Changelog
 
+### v1.1.1
+
+- Fix WSOD on Plugins page
+- Fix PHP errors when an Assests field has no selection(s)
+
 ### v1.1.0
 
 - Added support for the following fieldtypes: Assets, Grid, Playa, Relationships
