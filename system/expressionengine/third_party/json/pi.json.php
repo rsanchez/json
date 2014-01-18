@@ -524,6 +524,8 @@ class Json
 
     if (ee()->api_channel_fields->check_method_exists('replace_tag'))
     {
+      require_once PATH_THIRD.'json/libraries/Json_Template.php';
+
       $template = new Json_Template();
 
       $field_data = ee()->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
@@ -918,34 +920,5 @@ class Json
   }
 }
 
-class Json_Template extends EE_Template {
-  protected $TMPL;
-  public $variables;
-
-  public function __construct()
-  {
-    parent::__construct();
-    $this->TMPL =& ee()->TMPL;
-    ee()->TMPL =& $this;
-  }
-
-  public function __destruct()
-  {
-    ee()->TMPL =& $this->TMPL;
-  }
-
-  public function parse_variables($tagdata, $variables, $enable_backspace = TRUE)
-  {
-    $output = parent::parse_variables($tagdata, $variables, $enable_backspace);
-    $this->variables = $variables;
-    return $output;
-  }
-
-  public function parse_variables_row($tagdata, $variables, $solo = TRUE)
-  {
-    $this->variables = $variables;
-    return parent::parse_variables_row($tagdata, $variables, $solo);
-  }
-}
 /* End of file pi.json.php */
 /* Location: ./system/expressionengine/third_party/json/pi.json.php */
