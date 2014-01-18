@@ -550,6 +550,11 @@ class Json
       $field_data = array();
     }
 
+    if (isset($field_data['absolute_total_files']) && $field_data['absolute_total_files'] === 0)
+    {
+      return array();
+    }
+
     $fields = array(
       'file_id',
       'url',
