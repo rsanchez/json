@@ -2,7 +2,7 @@
 
 $plugin_info = array(
   'pi_name' => 'JSON',
-  'pi_version' => '1.1.1',
+  'pi_version' => '1.1.2',
   'pi_author' => 'Rob Sanchez',
   'pi_author_url' => 'https://github.com/rsanchez',
   'pi_description' => 'Output ExpressionEngine data in JSON format.',
@@ -122,7 +122,7 @@ class Json
         {
           $key = substr($field, 2);
 
-          if (array_key_exists($key, $this->fields))
+          if (in_array($key, $this->fields))
           {
             $select[] = $field;
           }
@@ -135,7 +135,7 @@ class Json
 
       foreach ($this->entries_custom_fields as &$field)
       {
-        if (empty($this->fields) || array_key_exists($field['field_name'], $this->fields))
+        if (empty($this->fields) || in_array($field['field_name'], $this->fields))
         {
           $select[] = 'wd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
         }
@@ -180,7 +180,7 @@ class Json
           ee()->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
         }
 
-        ee()->db->order_by($match[1]);
+        ee()->db->order_by($match[1], '', FALSE);
       }
 
       $query = $this->channel->query = ee()->db->get();
@@ -761,7 +761,7 @@ class Json
       {
         $key = substr($field, 2);
 
-        if (array_key_exists($key, $this->fields))
+        if (in_array($key, $this->fields))
         {
           $select[] = $field;
         }
@@ -774,7 +774,7 @@ class Json
 
     foreach ($custom_fields as &$field)
     {
-      if (empty($this->fields) || array_key_exists($field['m_field_name'], $this->fields))
+      if (empty($this->fields) || in_array($field['m_field_name'], $this->fields))
       {
         $select[] = 'd.'.ee()->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.ee()->db->protect_identifiers($field['m_field_name']);
       }
