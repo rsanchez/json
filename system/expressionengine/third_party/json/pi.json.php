@@ -180,7 +180,7 @@ class Json
           ee()->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
         }
 
-        ee()->db->order_by($match[1]);
+        ee()->db->order_by($match[1], '', FALSE);
       }
 
       $query = $this->channel->query = ee()->db->get();
