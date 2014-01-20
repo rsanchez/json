@@ -293,6 +293,11 @@ The request:
 
 ## Changelog
 
+### v1.1.2
+
+- Fix bug where `fields` parameter was not being honored
+- Fix bug causing fatal MySQL error when using the `fixed_order` parameter
+
 ### v1.1.1
 
 - Fix WSOD on Plugins page
