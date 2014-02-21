@@ -203,7 +203,9 @@ class Json
 
       $query = $this->channel->query = ee()->db->get();
 
-      if (ee()->TMPL->fetch_param('show_categories') === 'yes')
+      $show_categories = ee()->TMPL->fetch_param('show_categories') === 'yes';
+
+      if ($show_categories)
       {
         $this->channel->fetch_categories();
 
@@ -249,7 +251,7 @@ class Json
           }
         }
 
-        if (ee()->TMPL->fetch_param('show_categories') === 'yes')
+        if ($show_categories)
         {
           $entry['categories'] = array();
 
