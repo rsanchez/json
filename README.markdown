@@ -293,6 +293,10 @@ The request:
 
 ## Changelog
 
+### v1.1.3
+
+- Fix bug where show_categories parameter did not work
+
 ### v1.1.2
 
 - Fix bug where `fields` parameter was not being honored

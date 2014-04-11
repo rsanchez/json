@@ -37,7 +37,7 @@ class Json
   protected $entries_relationship_data;
   protected $entries_playa_data;
 
-  public function entries()
+  public function entries($entry_ids = null)
   {
     $this->initialize('entries');
 
@@ -55,45 +55,63 @@ class Json
       $this->channel = new Channel;
     }
 
-    //run through the channel module process to grab the entries
     $this->channel->initialize();
 
-    $this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
+    $order_by_string = '';
 
-    if ($this->channel->enable['custom_fields'] === TRUE)
+    if (is_array($entry_ids))
     {
-      $this->channel->fetch_custom_channel_fields();
+      $this->entries_entry_ids = $entry_ids;
+      $order_by_string = 'FIELD(t.entry_id,'.implode(',', $entry_ids).')';
     }
-
-    $save_cache = FALSE;
-
-    if (ee()->config->item('enable_sql_caching') == 'y')
+    else
     {
-      if (FALSE == ($this->channel->sql = $this->channel->fetch_cache()))
+      //run through the channel module process to grab the entries
+      $this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
+
+      if ($this->channel->enable['custom_fields'] === TRUE)
       {
-        $save_cache = TRUE;
+        $this->channel->fetch_custom_channel_fields();
       }
-      else
+
+      $save_cache = FALSE;
+
+      if (ee()->config->item('enable_sql_caching') == 'y')
       {
-        if (ee()->TMPL->fetch_param('dynamic') != 'no')
+        if (FALSE == ($this->channel->sql = $this->channel->fetch_cache()))
         {
-          if (preg_match("#(^|\/)C(\d+)#", $this->channel->query_string, $match) OR in_array($this->channel->reserved_cat_segment, explode("/", $this->channel->query_string)))
+          $save_cache = TRUE;
+        }
+        else
+        {
+          if (ee()->TMPL->fetch_param('dynamic') != 'no')
           {
-            $this->channel->cat_request = TRUE;
+            if (preg_match("#(^|\/)C(\d+)#", $this->channel->query_string, $match) OR in_array($this->channel->reserved_cat_segment, explode("/", $this->channel->query_string)))
+            {
+              $this->channel->cat_request = TRUE;
+            }
           }
         }
       }
+
+      if ( ! $this->channel->sql)
+      {
+        $this->channel->build_sql_query();
+      }
+
+      if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $this->channel->sql, $match))
+      {
+        $this->entries_entry_ids = explode(',', $match[1]);
+      }
+
+      if (preg_match('/ORDER BY (.*)?/', $this->channel->sql, $match))
+      {
+        $order_by_string = $match[1];
+      }
     }
 
-    if ( ! $this->channel->sql)
+    if ($this->entries_entry_ids)
     {
-      $this->channel->build_sql_query();
-    }
-
-    if (preg_match('/t\.entry_id IN \(([\d,]+)\)/', $this->channel->sql, $match))
-    {
-      $this->entries_entry_ids = explode(',', $match[1]);
-
       $this->entries_custom_fields = ee()->db->select('channel_fields.*, channels.channel_id')
                                              ->from('channel_fields')
                                              ->join('channels', 'channel_fields.group_id = channels.field_group')
@@ -152,24 +170,24 @@ class Json
               ->join('channel_data wd', 't.entry_id = wd.entry_id')
               ->where_in('t.entry_id', $this->entries_entry_ids);
 
-      if (preg_match('/ORDER BY (.*)?/', $this->channel->sql, $match))
+      if ($order_by_string)
       {
-        if (strpos($match[1], 'w.') !== FALSE)
+        if (strpos($order_by_string, 'w.') !== FALSE)
         {
           ee()->db->join('channels w', 't.channel_id = w.channel_id');
         }
 
-        if (strpos($match[1], 'm.') !== FALSE)
+        if (strpos($order_by_string, 'm.') !== FALSE)
         {
           ee()->db->join('members m', 'm.member_id = t.author_id');
         }
 
-        if (strpos($match[1], 'md.') !== FALSE)
+        if (strpos($order_by_string, 'md.') !== FALSE)
         {
           ee()->db->join('member_data md', 'm.member_id = md.member_id');
         }
 
-        if ($this->channel->display_by === 'week' && strpos($match[1], 'yearweek') !== FALSE)
+        if (ee()->TMPL->fetch_param('display_by') === 'week' && strpos($order_by_string, 'yearweek') !== FALSE)
         {
           $yearweek = TRUE;
 
@@ -180,12 +198,14 @@ class Json
           ee()->db->select("DATE_FORMAT(FROM_UNIXTIME(entry_date + $offset), '$format') AS yearweek", FALSE);
         }
 
-        ee()->db->order_by($match[1], '', FALSE);
+        ee()->db->order_by($order_by_string, '', FALSE);
       }
 
       $query = $this->channel->query = ee()->db->get();
 
-      if (ee()->TMPL->fetch_param('show_categories') === 'yes')
+      $show_categories = ee()->TMPL->fetch_param('show_categories') === 'yes';
+
+      if ($show_categories)
       {
         $this->channel->fetch_categories();
 
@@ -231,7 +251,7 @@ class Json
           }
         }
 
-        if (ee()->TMPL->fetch_param('show_categories') === 'yes')
+        if ($show_categories)
         {
           $entry['categories'] = array();
 
