@@ -904,7 +904,7 @@ class Json
       return NULL;
     }
 
-    return ($this->date_format) ? date($this->date_format, $date) : (int) ($date.'000');
+    return ($this->date_format) ? date($this->date_format, $date) : $date * 1000;
   }
 
   protected function respond(array $response, $callback = NULL)
