@@ -24,7 +24,7 @@ Set terminate to yes to terminate the template and output your json immediately,
 
 	fields="title|url_title"
 
-Specify which fields you wish to have in the array. Separate multiple fields by a pipe character. If you do not specify fields, you will get all of the default fields' data.
+Specify which fields you wish to have in the array. Separate multiple fields by a pipe character. If you do not specify fields, you will get all of the default fields' data. The primary key (`entry_id` for entries, `member_id` for members) will always be present and cannot be suppressed by this parameter.
 
 	content_type="text/javascript"
 
@@ -84,7 +84,7 @@ When paired with show_categories="yes", this will display only categories from t
 
 #### json:entries Custom Fields
 
-Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data.
+Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data. You *must* specify the `channel` parameter to get custom fields.
 
 ##### Matrix
 
