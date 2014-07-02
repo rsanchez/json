@@ -5,8 +5,7 @@ Output ExpressionEngine data in JSON format.
 ## Requirements
 
 - ExpressionEngine 2.6+
-
-For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/tree/v1.0.3).
+- PHP 5.4+
 
 ## Installation
 
@@ -39,18 +38,18 @@ Set jsonp to yes to enable a JSONP response. You must also specify a valid callb
 Set a callback function for your JSONP request. Since query strings do not work out-of-the-box in EE, you may want to consider using a URL segment to specify your callback, ie. callback="{segment_3}", rather than the standard ?callback=foo method.
 
 	date_format="U"
-	
+
 Use a different date format. Note: always returns dates as string.
 
 ## Dates
 
-By default, the date fields are in unix timestamp format, accurate to milliseconds. Use the Javascript Date object in combination with date field data:
+By default, the date fields are in ISO-8601 (`Y-m-d\TH:i:sO`) format. You may use ISO-8601-formatted strings in the the Javascript Date object constructor:
 
 	for (i in data) {
 		var entryDate = new Date(data[i].entry_date);
 	}
 
-If you require a different output format for the date fields, set the date_format= parameter. This uses the php date() function. common formats include "U" (unix timestamp in seconds), "c" (ISO 8601) or "Y-m-d H:i" (2011-12-24 19:06).
+If you require a different output format for the date fields, set the date_format= parameter. This uses the php date() function.
 
 ## json:entries
 
@@ -84,7 +83,7 @@ When paired with show_categories="yes", this will display only categories from t
 
 #### json:entries Custom Fields
 
-Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data. You *must* specify the `channel` parameter to get custom fields.
+Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data.
 
 ##### Matrix
 
@@ -193,68 +192,6 @@ The data will be the Unix timestamp, accurate to milliseconds. This is because t
 your_date_field: 1385661660000
 ```
 
-## json:search
-
-	{exp:json:search search_id="{segment_3}"}
-
-json:search must be paired with {exp:search:simple_form} or {exp:search:advanced_form}.
-
-#### json:search Parameters
-
-See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
-
-	search_id="{segment_3}"
-
-The native search forms will append a search_id automatically to the result_page when you submit a form.
-
-#### json:search Example
-
-	{exp:search:simple_form channel="site" form_id="search" return_page="site/json"}
-			<input type="text" name="keywords">
-			<input type="submit" value="Submit">
-	{/exp:search:simple_form}
-
-	<script type="text/javascript">
-	jQuery(document).ready(function($){
-		$("#search").submit(function(){
-			$.post(
-				$(this).attr("action"),
-				$(this).serialize(),
-				function(data) {
-					console.log(data);
-				},
-				"json"
-			);
-			return false;
-		});
-	});
-	</script>
-
-## json:members
-
-	{exp:json:members member_id="1|2"}
-
-json:members is a single tag, not a tag pair.
-
-#### json:members Parameters
-
-	member_id="1"
-
-Specify which members, by member_id, to output. Separate multiple member_id's with a pipe character.
-
-	username="admin"
-
-Specify which members, by username, to output. Separate multiple usernames with a pipe character.
-
-	group_id="1"
-
-Specify which members, by group_id, to output. Separate multiple group_id's
-
-	limit="1"
-
-Set a limit for records to retrieve.
-
-
 ## Advanced Examples
 
 ### JSONP
@@ -290,34 +227,3 @@ The request:
 	function yourCallbackFunction(data) {
 		console.log(data);
 	}
-
-## Changelog
-
-### v1.1.3
-
-- Fix bug where show_categories parameter did not work
-
-### v1.1.2
-
-- Fix bug where `fields` parameter was not being honored
-- Fix bug causing fatal MySQL error when using the `fixed_order` parameter
-
-### v1.1.1
-
-- Fix WSOD on Plugins page
-- Fix PHP errors when an Assests field has no selection(s)
-
-### v1.1.0
-
-- Added support for the following fieldtypes: Assets, Grid, Playa, Relationships
-- Change IDs (entry_id, author_id, etc.) and Dates to integers
-- Added `show_categories` and `show_category_group` parameters to `{exp:json:entries}`
-- Added `{exp:json:search}`
-- Added JSONP support
-- Added `date_format` parameter
-- Added `content_type` parameter
-
-## Upgrading from 1.0.x
-
-- IDs (entry_id, author_id, etc.) and Dates are returned as integers
-- The following fieldtypes have different output: Playa, Assets. Please see docs above for an example of their output.
