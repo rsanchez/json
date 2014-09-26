@@ -36,6 +36,7 @@ class Json
   protected $entries_rel_data;
   protected $entries_relationship_data;
   protected $entries_playa_data;
+  protected $image_manipulations = array();
 
   public function entries($entry_ids = null)
   {
@@ -599,11 +600,34 @@ class Json
 
     foreach ($field_data as &$row)
     {
+      $source_type = $row['source_type'];
+      $filedir_id = $row['filedir_id'];
       //excise any other fields from this row
       $row = array_intersect_key($row, array_flip($fields));
       $row['file_id'] = (int) $row['file_id'];
       $row['date'] = $this->date_format($row['date']);
       $row['date_modified'] = $this->date_format($row['date_modified']);
+
+      $row['manipulations'] = array();
+
+      if ($source_type === 'ee')
+      {
+        if ( ! isset($this->image_manipulations[$filedir_id]))
+        {
+          ee()->load->model('file_model');
+
+          $query = ee()->file_model->get_dimensions_by_dir_id($filedir_id);
+
+          $this->image_manipulations[$filedir_id] = $query->result();
+
+          $query->free_result();
+        }
+
+        foreach ($this->image_manipulations[$filedir_id] as $manipulation)
+        {
+          $row['manipulations'][$manipulation->short_name] = pathinfo($row['url'], PATHINFO_DIRNAME).'/_'.$manipulation->short_name.'/'.basename($row['url']);
+        }
+      }
     }
 
     return $field_data;

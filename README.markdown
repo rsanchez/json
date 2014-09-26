@@ -161,7 +161,11 @@ your_assets_field: [
 		"caption": null,
 		"author": null,
 		"desc": null,
-		"location": null
+		"location": null,
+		"manipulations": {
+			"medium": "http://yoursite.com/uploads/_medium/flower.jpg",
+			"large": "http://yoursite.com/uploads/_large/flower.jpg"
+		}
 	},
 	{
 		"file_id": 2,
@@ -180,10 +184,16 @@ your_assets_field: [
 		"caption": null,
 		"author": null,
 		"desc": null,
-		"location": null
+		"location": null,
+		"manipulations": {
+			"medium": "http://yoursite.com/uploads/_medium/dog.jpg",
+			"large": "http://yoursite.com/uploads/_large/dog.jpg"
+		}
 	}
 ]
 ```
+
+*NOTE: image manipulation urls are only available to Assets files store locally, not on Amazon S3 or Google Storage.*
 
 ##### Date
 
