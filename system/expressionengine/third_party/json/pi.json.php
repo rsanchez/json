@@ -935,6 +935,16 @@ class Json
   {
     ee()->load->library('javascript');
 
+    if (ee()->TMPL->fetch_param('root_node')) {
+      $response_with_nodes = array();
+      foreach($response as $item) {
+        $response_with_nodes[] = array(ee()->TMPL->fetch_param('root_node') => $item);
+      }
+      $response = $response_with_nodes;
+    }
+
+
+
     $response = function_exists('json_encode')
       ? json_encode($response)
       : ee()->javascript->generate_json($response, TRUE);
