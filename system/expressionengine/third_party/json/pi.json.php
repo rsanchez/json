@@ -935,15 +935,17 @@ class Json
   {
     ee()->load->library('javascript');
 
-    if (ee()->TMPL->fetch_param('root_node')) {
+    if (ee()->TMPL->fetch_param('item_root_node')) {
       $response_with_nodes = array();
       foreach($response as $item) {
-        $response_with_nodes[] = array(ee()->TMPL->fetch_param('root_node') => $item);
+        $response_with_nodes[] = array(ee()->TMPL->fetch_param('item_root_node') => $item);
       }
       $response = $response_with_nodes;
     }
 
-
+    if (ee()->TMPL->fetch_param('root_node')) {
+      $response = array(ee()->TMPL->fetch_param('root_node') => $response);
+    }
 
     $response = function_exists('json_encode')
       ? json_encode($response)
