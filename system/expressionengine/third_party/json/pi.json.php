@@ -2,7 +2,7 @@
 
 $plugin_info = array(
   'pi_name' => 'JSON',
-  'pi_version' => '1.1.4',
+  'pi_version' => '1.1.5',
   'pi_author' => 'Rob Sanchez',
   'pi_author_url' => 'https://github.com/rsanchez',
   'pi_description' => 'Output ExpressionEngine data in JSON format.',
@@ -529,16 +529,18 @@ class Json
     return $this->date_format($field_data);
   }
 
-  protected function entries_text($entry_id, $field, $field_data) {
-    $field_settings = ee()->api_channel_fields->get_settings($field["field_id"]);
-    if ($field_settings["field_content_type"] == "numeric") {
+  protected function entries_text($entry_id, $field, $field_data)
+  {
+    $field_settings = ee()->api_channel_fields->get_settings($field['field_id']);
+
+    if ($field_settings['field_content_type'] === 'numeric' || $field_settings['field_content_type'] === 'decimal')
+    {
       return floatval($field_data);
     }
-    if ($field_settings["field_content_type"] == "integer") {
+
+    if ($field_settings['field_content_type'] === 'integer')
+    {
       return intval($field_data);
-    }
-    if ($field_settings["field_content_type"] == "decimal") {
-      return floatval($field_data);
     }
 
     return $field_data;
@@ -950,16 +952,21 @@ class Json
   {
     ee()->load->library('javascript');
 
-    if (ee()->TMPL->fetch_param('item_root_node')) {
+    if ($item_root_node = ee()->TMPL->fetch_param('item_root_node'))
+    {
       $response_with_nodes = array();
-      foreach($response as $item) {
-        $response_with_nodes[] = array(ee()->TMPL->fetch_param('item_root_node') => $item);
+
+      foreach($response as $item)
+      {
+        $response_with_nodes[] = array($item_root_node => $item);
       }
+
       $response = $response_with_nodes;
     }
 
-    if (ee()->TMPL->fetch_param('root_node')) {
-      $response = array(ee()->TMPL->fetch_param('root_node') => $response);
+    if ($root_node = ee()->TMPL->fetch_param('root_node'))
+    {
+      $response = array($root_node => $response);
     }
 
     $response = function_exists('json_encode')
