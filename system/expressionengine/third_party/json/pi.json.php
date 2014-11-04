@@ -529,6 +529,21 @@ class Json
     return $this->date_format($field_data);
   }
 
+  protected function entries_text($entry_id, $field, $field_data) {
+    $field_settings = ee()->api_channel_fields->get_settings($field["field_id"]);
+    if ($field_settings["field_content_type"] == "numeric") {
+      return floatval($field_data);
+    }
+    if ($field_settings["field_content_type"] == "integer") {
+      return intval($field_data);
+    }
+    if ($field_settings["field_content_type"] == "decimal") {
+      return floatval($field_data);
+    }
+
+    return $field_data;
+  }
+
   protected function entries_custom_field($entry_id, $field, $field_data, $entry, $tagdata = ' ')
   {
     ee()->load->add_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']], FALSE);
