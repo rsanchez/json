@@ -947,8 +947,6 @@ class Json
       $response = array(ee()->TMPL->fetch_param('root_node') => $response);
     }
 
-    print_r($response);
-
     $response = function_exists('json_encode')
       ? json_encode($response, JSON_NUMERIC_CHECK)
       : ee()->javascript->generate_json($response, TRUE);
