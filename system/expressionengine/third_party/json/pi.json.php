@@ -948,7 +948,7 @@ class Json
     }
 
     $response = function_exists('json_encode')
-      ? json_encode($response, JSON_NUMERIC_CHECK)
+      ? json_encode($response)
       : ee()->javascript->generate_json($response, TRUE);
 
     if ( ! is_null($callback))
