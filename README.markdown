@@ -276,6 +276,51 @@ your_assets_field: [
 
 *NOTE: image manipulation urls are only available to Assets files store locally, not on Amazon S3 or Google Storage.*
 
+##### Channel Files
+
+```
+your_channel_files_field: [
+  {
+    "file_id": 1,
+    "url": "http://yoursite.com/uploads/flower.jpg",
+    "filename": "flower.jpg",
+    "extension": "jpg",
+    "kind": "image\/jpeg",
+    "size": "65 KB",
+    "title": "flower",
+    "date": 1389459034000,
+    "author": 1,
+    "desc": "Lorem ipsum",
+    "primary": true,
+    "downloads": 10,
+    "custom1": null,
+    "custom2": null,
+    "custom3": null,
+    "custom4": null,
+    "custom5": null
+  },
+  {
+    "file_id": 2,
+    "url": "http://yoursite.com/uploads/dog.jpg",
+    "filename": "dog.jpg",
+    "extension": "jpg",
+    "kind": "image\/jpeg",
+    "size": "75 KB",
+    "title": "dog",
+    "date": 1389466147000,
+    "author": 1,
+    "desc": "Lorem ipsum",
+    "primary": false,
+    "downloads": 0,
+    "custom1": null,
+    "custom2": null,
+    "custom3": null,
+    "custom4": null,
+    "custom5": null
+  }
+]
+```
+
 ##### Date
 
 The data will be the Unix timestamp, accurate to milliseconds. This is because the native JavaScript Date object accepts a millisecond-based timestamp in its constructor.
