@@ -443,6 +443,10 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v1.1.6
+
+- Add Channel Files support.
+
 ### v1.1.5
 
 - Add `root_node` and `item_root_node` parameters.
