@@ -529,7 +529,8 @@ class Json
   {
     if (is_null($this->entries_playa_data))
     {
-      $field_settings = unserialize(base64_decode($field['field_settings']))['channel_files'];
+      $field_settings = unserialize(base64_decode($field['field_settings']));
+      $field_settings = $field_settings['channel_files'];
 
       $query = ee()->db->select()
           ->where('entry_id', $entry_id)
