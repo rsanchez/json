@@ -955,13 +955,16 @@ class Json
       }
     }
 
+    // Parse parameters first so we don't interrupt query in progress with parse_globals()
+    $member_ids = ee()->TMPL->parse_globals(ee()->TMPL->fetch_param('member_id'));
+
     ee()->db->select(implode(', ', $select), FALSE)
             ->from('members m')
             ->join('member_data d', 'm.member_id = d.member_id');
 
-    if (ee()->TMPL->fetch_param('member_id'))
+    if ($member_ids)
     {
-      ee()->db->where_in('m.member_id', explode('|', ee()->TMPL->fetch_param('member_id')));
+      ee()->db->where_in('m.member_id', explode('|', $member_ids));
     }
     else if (ee()->TMPL->fetch_param('username'))
     {
