@@ -962,7 +962,7 @@ class Json
             ->from('members m')
             ->join('member_data d', 'm.member_id = d.member_id');
 
-    if ($member_ids)
+    if (strlen($member_ids) > 0)
     {
       ee()->db->where_in('m.member_id', explode('|', $member_ids));
     }
