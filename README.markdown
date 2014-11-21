@@ -382,7 +382,7 @@ json:members is a single tag, not a tag pair.
 
 ##### `member_id="1"`
 
-Specify which members, by member_id, to output. Separate multiple member_id's with a pipe character.
+Specify which members, by member_id, to output. Separate multiple member_id's with a pipe character. Use `member_id="CURRENT_USER"` to get member data for just the current user.
 
 ##### `username="admin"`
 
