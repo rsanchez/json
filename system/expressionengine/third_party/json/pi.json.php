@@ -961,7 +961,13 @@ class Json
 
     if (ee()->TMPL->fetch_param('member_id'))
     {
-      ee()->db->where_in('m.member_id', explode('|', ee()->TMPL->fetch_param('member_id')));
+      if (ee()->TMPL->fetch_param('member_id') == 'CURRENT_USER' AND ee()->session->userdata['member_id'] != '0') {
+        $member_ids = ee()->session->userdata['member_id'];
+      } else {
+        $member_ids = ee()->TMPL->fetch_param('member_id');
+      }
+
+      ee()->db->where_in('m.member_id', explode('|', $member_ids));
     }
     else if (ee()->TMPL->fetch_param('username'))
     {
