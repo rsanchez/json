@@ -527,108 +527,107 @@ class Json
 
   protected function entries_channel_files($entry_id, $field, $field_data, $entry)
   {
-    if (is_null($this->entries_playa_data))
+    $this->entries_channel_files_data = [];
+
+    $field_settings = unserialize(base64_decode($field['field_settings']));
+    $field_settings = $field_settings['channel_files'];
+
+    $query = ee()->db->select()
+        ->where('entry_id', $entry_id)
+        ->where('field_id', $field['field_id'])
+        ->order_by('file_order', 'asc')
+        ->get('channel_files');
+
+    foreach ($query->result_array() as $row)
     {
-      $field_settings = unserialize(base64_decode($field['field_settings']));
-      $field_settings = $field_settings['channel_files'];
+      $field_data = array(
+        'file_id' => (int) $row['file_id'],
+        'url' => $row['filename'],
+        'filename' => $row['filename'],
+        'extension' => $row['extension'],
+        'kind' => $row['mime'],
+        'size' => $row['filesize'],
+        'title' => $row['title'],
+        'date' => $this->date_format($row['date']),
+        'author' => (int)$row['member_id'],
+        'desc' => $row['description'],
+        'primary' => (bool)$row['file_primary'],
+        'downloads' => (int)$row['downloads'],
+        'custom1' => (isset($row['cffield1']) ? $row['cffield1'] : null),
+        'custom2' => (isset($row['cffield2']) ? $row['cffield2'] : null),
+        'custom3' => (isset($row['cffield3']) ? $row['cffield3'] : null),
+        'custom4' => (isset($row['cffield4']) ? $row['cffield4'] : null),
+        'custom5' => (isset($row['cffield5']) ? $row['cffield5'] : null)
+      );
 
-      $query = ee()->db->select()
-          ->where('entry_id', $entry_id)
-          ->where('field_id', $field['field_id'])
-          ->order_by('file_order', 'asc')
-          ->get('channel_files');
+      $fieldtype_specific_settings = $field_settings['locations'][$row['upload_service']];
 
-      foreach ($query->result_array() as $row)
+      switch ($row['upload_service'])
       {
-        $field_data = array(
-          'file_id' => (int) $row['file_id'],
-          'url' => $row['filename'],
-          'filename' => $row['filename'],
-          'extension' => $row['extension'],
-          'kind' => $row['mime'],
-          'size' => $row['filesize'],
-          'title' => $row['title'],
-          'date' => $this->date_format($row['date']),
-          'author' => (int)$row['member_id'],
-          'desc' => $row['description'],
-          'primary' => (bool)$row['file_primary'],
-          'downloads' => (int)$row['downloads'],
-          'custom1' => (isset($row['cffield1']) ? $row['cffield1'] : null),
-          'custom2' => (isset($row['cffield2']) ? $row['cffield2'] : null),
-          'custom3' => (isset($row['cffield3']) ? $row['cffield3'] : null),
-          'custom4' => (isset($row['cffield4']) ? $row['cffield4'] : null),
-          'custom5' => (isset($row['cffield5']) ? $row['cffield5'] : null)
-        );
+        case 'local':
+          // get upload folder details from EE
+          $query = ee()->db->select('url')
+                           ->where('id', $fieldtype_specific_settings['location'])
+                           ->get('exp_upload_prefs');
 
-        $fieldtype_specific_settings = $field_settings['locations'][$row['upload_service']];
+          $result = $query->row_array();
+          $query->free_result();
 
-        switch ($row['upload_service'])
-        {
-          case 'local':
-            // get upload folder details from EE
-            $query = ee()->db->select('url')
-                             ->where('id', $fieldtype_specific_settings['location'])
-                             ->get('exp_upload_prefs');
-
-            $result = $query->row_array();
-            $query->free_result();
-
-            $base_url = $result['url'] . ($field_settings['entry_id_folder'] == 'yes' ? $entry_id . '/' : '');
-            $field_data['url'] = $base_url . $field_data['url'];
-            break;
-          case 's3':
-            if ($fieldtype_specific_settings['cloudfront_domain'] != '')
-            {
-              $domain = rtrim($fieldtype_specific_settings['cloudfront_domain'], '/');
-              $domain = 'http://' . preg_replace('#https?://#', '', $domain);
-            }
-            else
-            {
-              $domain = "http://{$fieldtype_specific_settings['bucket']}.s3.amazonaws.com";
-            }
+          $base_url = $result['url'] . ($field_settings['entry_id_folder'] == 'yes' ? $entry_id . '/' : '');
+          $field_data['url'] = $base_url . $field_data['url'];
+          break;
+        case 's3':
+          if ($fieldtype_specific_settings['cloudfront_domain'] != '')
+          {
+            $domain = rtrim($fieldtype_specific_settings['cloudfront_domain'], '/');
+            $domain = 'http://' . preg_replace('#https?://#', '', $domain);
+          }
+          else
+          {
+            $domain = "http://{$fieldtype_specific_settings['bucket']}.s3.amazonaws.com";
+          }
 
 
-            $dir = ($fieldtype_specific_settings['directory'] != '' ? rtrim($fieldtype_specific_settings['directory'], '/') . '/' : '');
+          $dir = ($fieldtype_specific_settings['directory'] != '' ? rtrim($fieldtype_specific_settings['directory'], '/') . '/' : '');
 
-            $base_url = "{$domain}/{$dir}{$entry_id}/";
-            $field_data['url'] = $base_url . $field_data['url'];
-            break;
-          case 'cloudfiles':
-          case 'ftp':
-          case 'sftp':
-            require_once PATH_THIRD.'channel_files/locations/cfile_location.php';
-            require_once PATH_THIRD."channel_files/locations/{$row['upload_service']}/{$row['upload_service']}.php";
+          $base_url = "{$domain}/{$dir}{$entry_id}/";
+          $field_data['url'] = $base_url . $field_data['url'];
+          break;
+        case 'cloudfiles':
+        case 'ftp':
+        case 'sftp':
+          require_once PATH_THIRD.'channel_files/locations/cfile_location.php';
+          require_once PATH_THIRD."channel_files/locations/{$row['upload_service']}/{$row['upload_service']}.php";
 
-            $class_name = "CF_Location_{$row['upload_service']}";
-            $cf = new $class_name($fieldtype_specific_settings);
-            $dir = $entry_id;
-            $entry_id_folder = (isset($fieldtype_specific_settings['entry_id_folder']) ? $fieldtype_specific_settings['entry_id_folder'] : null);;
-            if (isset($entry_id_folder) && $fieldtype_specific_settings['entry_id_folder'] == 'no')
-            {
-              $dir = FALSE;
-            }
+          $class_name = "CF_Location_{$row['upload_service']}";
+          $cf = new $class_name($fieldtype_specific_settings);
+          $dir = $entry_id;
+          $entry_id_folder = (isset($fieldtype_specific_settings['entry_id_folder']) ? $fieldtype_specific_settings['entry_id_folder'] : null);;
+          if (isset($entry_id_folder) && $fieldtype_specific_settings['entry_id_folder'] == 'no')
+          {
+            $dir = FALSE;
+          }
 
-            $field_data['url'] = $cf->parse_file_url($dir, $field_data['url']);
-            break;
-          default:
-            break;
-        }
-
-        // make file size relevant
-        $units = array('B', 'KB', 'MB', 'GB');
-        $units_index = 0;
-        while ($field_data['size'] >= 1024)
-        {
-          $field_data['size'] /= 1024;
-          $units_index++;
-        }
-        $field_data['size'] = round($field_data['size']) . ' ' . $units[$units_index];
-
-        $this->entries_channel_files_data[$row['field_id']][] = $field_data;
+          $field_data['url'] = $cf->parse_file_url($dir, $field_data['url']);
+          break;
+        default:
+          break;
       }
 
-      $query->free_result();
+      // make file size relevant
+      $units = array('B', 'KB', 'MB', 'GB');
+      $units_index = 0;
+      while ($field_data['size'] >= 1024)
+      {
+        $field_data['size'] /= 1024;
+        $units_index++;
+      }
+      $field_data['size'] = round($field_data['size']) . ' ' . $units[$units_index];
+
+      $this->entries_channel_files_data[$row['field_id']][] = $field_data;
     }
+
+    $query->free_result();
 
     if (isset($row['field_id'], $this->entries_channel_files_data[$row['field_id']]))
     {
