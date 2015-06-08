@@ -527,7 +527,7 @@ class Json
 
   protected function entries_channel_files($entry_id, $field, $field_data, $entry)
   {
-    $this->entries_channel_files_data = [];
+    $this->entries_channel_files_data = array();
 
     $field_settings = unserialize(base64_decode($field['field_settings']));
     $field_settings = $field_settings['channel_files'];
