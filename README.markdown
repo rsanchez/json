@@ -10,7 +10,11 @@ For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/js
 
 ## Installation
 
+#### EE2
 * Copy the /system/expressionengine/third_party/json/ folder to your /system/expressionengine/third_party/ folder
+
+#### EE3
+* Copy the /ee/user/addons/json/ folder to your /ee/user/addons/ folder
 
 ## Global Parameters
 
