@@ -38,6 +38,13 @@ class Json
   protected $entries_playa_data;
   protected $entries_channel_files_data;
   protected $image_manipulations = array();
+  
+  public function __construct() {
+    $this->response_options = array(
+      'root_node' => ee()->TMPL->fetch_param('root_node'),
+      'item_root_node' => ee()->TMPL->fetch_param('item_root_node'),
+    );
+  }
 
   public function entries($entry_ids = null)
   {
@@ -1076,7 +1083,7 @@ class Json
   {
     ee()->load->library('javascript');
 
-    if ($item_root_node = ee()->TMPL->fetch_param('item_root_node'))
+    if ($item_root_node = $this->response_options['item_root_node'])
     {
       $response_with_nodes = array();
 
@@ -1088,7 +1095,7 @@ class Json
       $response = $response_with_nodes;
     }
 
-    if ($root_node = ee()->TMPL->fetch_param('root_node'))
+    if ($root_node = $this->response_options['root_node'])
     {
       $response = array($root_node => $response);
     }
