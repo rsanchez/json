@@ -694,6 +694,10 @@ class Json
     return $field_data;
   }
 
+  protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
+    return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
+  }
+
   protected function entries_assets($entry_id, $field, $field_data, $entry)
   {
     $field_data = $this->entries_custom_field($entry_id, $field, $field_data, $entry);
