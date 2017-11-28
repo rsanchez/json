@@ -677,6 +677,7 @@ class Json
     {
       require_once PATH_THIRD.'json/libraries/Json_Template.php';
 
+      $ee_tmpl = ee()->TMPL;
       $template = new Json_Template();
 
       $field_data = ee()->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
@@ -687,6 +688,7 @@ class Json
       }
 
       unset($template);
+      ee()->TMPL = $ee_tmpl;
     }
 
     ee()->load->remove_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']]);
