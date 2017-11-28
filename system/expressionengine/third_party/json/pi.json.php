@@ -304,6 +304,18 @@ class Json
 
     ee()->load->library('typography');
 
+    //  ----------------------------------------
+    // 'json_plugin_entries_end' hook.
+    //  - Enables additional manipulation of entry data
+    //  ----------------------------------------
+
+    if (ee()->extensions->active_hook('json_plugin_entries_end') === TRUE)
+    {
+      ee()->extensions->call('json_plugin_entries_end', $this);
+      if (ee()->extensions->end_script === TRUE) return;
+    }
+    //  ----------------------------------------
+
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
 
