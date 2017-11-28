@@ -2,7 +2,7 @@
 
 $plugin_info = array(
   'pi_name' => 'JSON',
-  'pi_version' => '1.1.7',
+  'pi_version' => '1.1.8',
   'pi_author' => 'Rob Sanchez',
   'pi_author_url' => 'https://github.com/rsanchez',
   'pi_description' => 'Output ExpressionEngine data in JSON format.',

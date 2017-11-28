@@ -443,6 +443,16 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v1.1.8
+
+- Added `json_plugin_entries_end` and `json_plugin_members_end` hooks
+- Improved Wygwam support
+- Fixed intermittent disappearing `ee()->TMPL` object
+
+### v1.1.7
+
+- Added `offset` support for members
+
 ### v1.1.6
 
 - Add Channel Files support.
