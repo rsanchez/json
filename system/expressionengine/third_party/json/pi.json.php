@@ -1031,6 +1031,18 @@ class Json
       }
     }
 
+    //  ----------------------------------------
+    // 'json_plugin_members_end' hook.
+    //  - Enables additional manipulation of entry data
+    //  ----------------------------------------
+
+    if (ee()->extensions->active_hook('json_plugin_members_end') === TRUE)
+    {
+      $members = ee()->extensions->call('json_plugin_members_end', $members, $this);
+      if (ee()->extensions->end_script === TRUE) return;
+    }
+    //  ----------------------------------------
+
     return $this->respond($members);
   }
 
