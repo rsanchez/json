@@ -35,6 +35,7 @@ class Json
   protected $entries_grid_cols;
   protected $entries_rel_data;
   protected $entries_relationship_data;
+  protected $entries_grid_relationship_data;
   protected $entries_playa_data;
   protected $entries_channel_files_data;
   protected $image_manipulations = array();
@@ -431,7 +432,12 @@ class Json
 
         foreach ($this->entries_grid_cols[$field['field_id']] as $col_id => $col)
         {
-          $row[$col['col_name']] = $grid_row['col_id_'.$col_id];
+          $val = $grid_row['col_id_' . $col_id];
+          if ($col['col_type'] == 'relationship')
+          {
+            $val = $this->entries_grid_relationship($col_id, $row['row_id'], $entry_id);
+          }
+          $row[$col['col_name']] = $val;
         }
 
         $data[] = $row;
@@ -497,6 +503,42 @@ class Json
     if (isset($this->entries_relationship_data[$entry_id][$field['field_id']]))
     {
       return $this->entries_relationship_data[$entry_id][$field['field_id']];
+    }
+
+    return array();
+  }
+
+  protected function entries_grid_relationship($grid_col_id, $grid_row_id, $entry_id)
+  {
+    if (is_null($this->entries_grid_relationship_data))
+    {
+      $query = ee()->db->select('parent_id, child_id, grid_field_id, grid_col_id, grid_row_id')
+                       ->where_in('parent_id', $this->entries_entry_ids)
+                       ->where('grid_col_id', $grid_col_id)
+                       ->order_by('order', 'asc')
+                       ->get('relationships');
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']]))
+        {
+          $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']] = array();
+        }
+
+        if ( ! isset($this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']]))
+        {
+          $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']] = array();
+        }
+
+        $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']][] = (int) $row['child_id'];
+      }
+
+      $query->free_result();
+    }
+
+    if (isset($this->entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id]))
+    {
+      return $this->entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id];
     }
 
     return array();
@@ -1058,6 +1100,7 @@ class Json
         $this->entries_matrix_rows = NULL;
         $this->entries_rel_data = NULL;
         $this->entries_relationship_data = NULL;
+        $this->entries_grid_relationship_data = NULL;
         $this->entries_playa_data = NULL;
         $this->entries_channel_files_data = NULL;
         break;
