@@ -4,13 +4,13 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 2.6+
+- ExpressionEngine 3+
 
-For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/tree/v1.0.3).
+For older versions of EE use JSON version [1.1.7](https://github.com/rsanchez/json).
 
 ## Installation
 
-* Copy the /system/expressionengine/third_party/json/ folder to your /system/expressionengine/third_party/ folder
+* Copy the /system/user/addons/json_output/ folder to your /system/user/addons/ folder
 
 ## Global Parameters
 
