@@ -10,7 +10,7 @@ For older versions of EE use JSON version [1.1.7](https://github.com/rsanchez/js
 
 ## Warning
 
-Do thoroughly test this plugin on a local or development server before using it on a production/live server!
+Do thoroughly test this plugin on a local or development server before using it on a production/live server!   
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
 
 ## Installation
