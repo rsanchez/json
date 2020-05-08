@@ -6,7 +6,7 @@ Output ExpressionEngine data in JSON format.
 
 - ExpressionEngine 3+
 
-For older versions of EE use JSON version [1.1.7](https://github.com/rsanchez/json).
+For older versions of EE use JSON version [1.1.7](https://github.com/rsanchez/json) by Rob Sanchez.
 
 ## Installation
 
