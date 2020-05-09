@@ -15,7 +15,7 @@ Since this plugin only outputs data I don't expect any damage but I will not acc
 
 ## Installation
 
-* Copy the /system/user/addons/json_output/ folder to your /system/user/addons/ folder
+* Copy the `/system/user/addons/json_output/` folder to your `/system/user/addons/` folder
 
 ## Global Parameters
 
