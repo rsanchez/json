@@ -10,7 +10,7 @@ For older versions of EE use JSON version [1.1.7](https://github.com/rsanchez/js
 
 ## Warning
 
-Not tested with categories, Matrix and Playa yet.
+Not tested with categories, Matrix and Playa yet!
 
 Do thoroughly test this plugin on a local or development server before using it on a production/live server!   
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
@@ -450,53 +450,7 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
-### v1.1.8
+### v1.0.0
 
-- Added `json_plugin_entries_end` and `json_plugin_members_end` hooks
-- Improved Wygwam support
-- Fixed intermittent disappearing `ee()->TMPL` object
+- Changed the SQL statement to be compatible with EE3+
 
-### v1.1.7
-
-- Added `offset` support for members
-
-### v1.1.6
-
-- Add Channel Files support.
-
-### v1.1.5
-
-- Add `root_node` and `item_root_node` parameters.
-
-### v1.1.4
-
-- Add manipulations to Assets fields
-
-### v1.1.3
-
-- Fix bug where show_categories parameter did not work
-
-### v1.1.2
-
-- Fix bug where `fields` parameter was not being honored
-- Fix bug causing fatal MySQL error when using the `fixed_order` parameter
-
-### v1.1.1
-
-- Fix WSOD on Plugins page
-- Fix PHP errors when an Assests field has no selection(s)
-
-### v1.1.0
-
-- Added support for the following fieldtypes: Assets, Grid, Playa, Relationships
-- Change IDs (entry_id, author_id, etc.) and Dates to integers
-- Added `show_categories` and `show_category_group` parameters to `{exp:json:entries}`
-- Added `{exp:json:search}`
-- Added JSONP support
-- Added `date_format` parameter
-- Added `content_type` parameter
-
-## Upgrading from 1.0.x
-
-- IDs (entry_id, author_id, etc.) and Dates are returned as integers
-- The following fieldtypes have different output: Playa, Assets. Please see docs above for an example of their output.
