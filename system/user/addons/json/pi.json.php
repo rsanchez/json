@@ -1,6 +1,21 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
-class Json_output
+// $plugin_info is here for EE2 compatibility
+$plugin_info = array(
+  'pi_name' => 'JSON',
+  'pi_version' => '1.1.9',
+  'pi_author' => 'Rob Sanchez',
+  'pi_author_url' => 'https://github.com/rsanchez',
+  'pi_description' => 'Output ExpressionEngine data in JSON format.',
+  'pi_usage' => '
+{exp:json:entries channel="news"}
+
+{exp:json:entries channel="products" search:product_size="10"}
+
+{exp:json:members member_id="1"}',
+);
+
+class Json
 {
   /* settings */
   protected $content_type = 'application/json';
@@ -100,11 +115,9 @@ class Json_output
 
     if ($this->entries_entry_ids)
     {
-      $this->entries_custom_fields = ee()->db->select('channel_fields.*')
+      $this->entries_custom_fields = ee()->db->select('channel_fields.*, channels.channel_id')
                                              ->from('channel_fields')
-                                             ->join('channel_field_groups_fields', 'channel_fields.field_id = channel_field_groups_fields.field_id')
-                                             ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
-                                             ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
+                                             ->join('channels', 'channel_fields.group_id = channels.field_group')
                                              ->where('channels.site_id', ee()->config->item('site_id'))
                                              ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
                                              ->get()
@@ -235,7 +248,7 @@ class Json_output
         foreach ($this->entries_custom_fields as &$field)
         {
           //call our custom callback for this fieldtype if it exists
-          if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
+          if (is_callable(array($this, 'entries_'.$field['field_type'])))
           {
             $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
           }
@@ -291,6 +304,18 @@ class Json_output
     ee()->load->library('javascript');
 
     ee()->load->library('typography');
+
+    //  ----------------------------------------
+    // 'json_plugin_entries_end' hook.
+    //  - Enables additional manipulation of entry data
+    //  ----------------------------------------
+
+    if (ee()->extensions->active_hook('json_plugin_entries_end') === TRUE)
+    {
+      ee()->extensions->call('json_plugin_entries_end', $this);
+      if (ee()->extensions->end_script === TRUE) return;
+    }
+    //  ----------------------------------------
 
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
@@ -665,6 +690,7 @@ class Json_output
     {
       require_once PATH_THIRD.'json/libraries/Json_Template.php';
 
+      $ee_tmpl = ee()->TMPL;
       $template = new Json_Template();
 
       $field_data = ee()->api_channel_fields->apply('replace_tag', array($field_data, array(), $tagdata));
@@ -675,11 +701,16 @@ class Json_output
       }
 
       unset($template);
+      ee()->TMPL = $ee_tmpl;
     }
 
     ee()->load->remove_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']]);
 
     return $field_data;
+  }
+  
+  protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
+    return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
   }
 
   protected function entries_assets($entry_id, $field, $field_data, $entry)
@@ -904,15 +935,15 @@ class Json_output
     );
 
     if (version_compare(APP_VER, '2.6', '<'))
-    {
+    { 
       $default_fields[] = 'm.daylight_savings';
     }
-
+    
     $query = ee()->db->select('m_field_id, m_field_name')
                      ->get('member_fields');
 
     $custom_fields = $query->result_array();
-
+    
     $query->free_result();
 
     $select = array();
@@ -999,7 +1030,18 @@ class Json_output
           $member[$field] = $this->date_format($member[$field]);
         }
       }
+    }    
+    //  ----------------------------------------
+    // 'json_plugin_members_end' hook.
+    //  - Enables additional manipulation of entry data
+    //  ----------------------------------------
+
+    if (ee()->extensions->active_hook('json_plugin_members_end') === TRUE)
+    {
+      $members = ee()->extensions->call('json_plugin_members_end', $members, $this);
+      if (ee()->extensions->end_script === TRUE) return;
     }
+    //  ----------------------------------------
 
     return $this->respond($members);
   }
@@ -1110,5 +1152,5 @@ class Json_output
   }
 }
 
-/* End of file pi.json_output.php */
-/* Location: ./system/user/addons/json/pi.json_output.php */
+/* End of file pi.json.php */
+/* Location: ./system/user/addons/json/pi.json.php */
