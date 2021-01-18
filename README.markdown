@@ -12,7 +12,7 @@ For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/js
 
 ***Not tested with Assets, Matrix and Playa fieldtypes!***
 
-If you use Assets, Matrix or Playa fields do thoroughly test this plugin on a local or development server before using it on a production/live server!
+I don't own Assets, Matrix and Playa modules, so if you use Assets, Matrix or Playa fields I recommend to verify whether changes to the code are required and to test this plugin on a local or development server before using it on a production/live server.
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
 
 ## Installation
