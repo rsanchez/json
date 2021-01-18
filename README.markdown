@@ -456,7 +456,6 @@ function yourCallbackFunction(data) {
 - Added relationships support for grids by [ahebrank](https://github.com/ahebrank)
 - Added `system/user/addons/json/addon.setup.php` for EE3
 - Added `system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
-- Fluid fieldtype not supported
 - **Note:** not tested with Playa, Assets and Matrix
 
 ### v1.1.8
