@@ -4,10 +4,9 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 3
-- EE2 no longer supported
+- ExpressionEngine 2.6+
 
-For older versions of EE use JSON version [1.1.8](https://github.com/rsanchez/json/releases/tag/v1.1.8) by Rob Sanchez.
+For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/releases/tag/v1.0.3).
 
 ## Warning
 
