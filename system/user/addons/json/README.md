@@ -10,7 +10,7 @@ For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/js
 
 ## Warning
 
-***Not tested with Assets, Matrix and Playa fieldtypes!***
+***Not tested with Assets, Matrix and Playa!***
 
 If you use Assets, Matrix or Playa fields do thoroughly test this plugin on a local or development server before using it on a production/live server!
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
@@ -509,3 +509,5 @@ function yourCallbackFunction(data) {
 
 - IDs (entry_id, author_id, etc.) and Dates are returned as integers
 - The following fieldtypes have different output: Playa, Assets. Please see docs above for an example of their output.
+
+
