@@ -4,9 +4,9 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 2.6+
+- ExpressionEngine 4 or 5
 
-For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/tree/v1.0.3).
+For versions EE 2.6+ to EE3.x use JSON version [1.1.9](https://github.com/zignature/json/releases/tag/v1.1.9).
 
 ## Warning
 
@@ -450,13 +450,24 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v2.0.0
+
+- ExpressionEngine 4 or 5 required
+- Several changes to the code due to database changes
+- Fluid fieldtype not supported
+- **Note:** not tested with Assets, Matrix and Playa
+
 ### v1.1.9
 
 - EE3 compatibility
 - Added relationships support for grids by [ahebrank](https://github.com/ahebrank)
 - Added `system/user/addons/json/addon.setup.php` for EE3
 - Added `system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
+<<<<<<< Updated upstream
 - **Note:** not tested with Playa, Assets and Matrix
+=======
+- **Note:** not tested with Assets, Matrix and Playa
+>>>>>>> Stashed changes
 
 ### v1.1.8
 
