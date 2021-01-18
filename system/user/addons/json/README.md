@@ -4,9 +4,10 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 2.6+
+- ExpressionEngine 3
+- EE2 no longer supported
 
-For older versions of EE use JSON version [1.0.3](https://github.com/rsanchez/json/releases/tag/v1.0.3).
+For older versions of EE use JSON version [1.1.8](https://github.com/rsanchez/json/releases/tag/v1.1.8) by Rob Sanchez.
 
 ## Warning
 
@@ -509,3 +510,5 @@ function yourCallbackFunction(data) {
 
 - IDs (entry_id, author_id, etc.) and Dates are returned as integers
 - The following fieldtypes have different output: Playa, Assets. Please see docs above for an example of their output.
+
+

@@ -1,8 +1,9 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
+// $plugin_info is here for EE2 compatibility
 $plugin_info = array(
   'pi_name' => 'JSON',
-  'pi_version' => '1.1.8',
+  'pi_version' => '1.1.9',
   'pi_author' => 'Rob Sanchez',
   'pi_author_url' => 'https://github.com/rsanchez',
   'pi_description' => 'Output ExpressionEngine data in JSON format.',
@@ -52,7 +53,7 @@ class Json
     //instantiate channel module object
     if (empty($this->channel))
     {
-      require_once PATH_MOD.'channel/mod.channel'.EXT;
+      require_once PATH_MOD.'channel/mod.channel.php';
 
       $this->channel = new Channel;
     }
@@ -247,7 +248,7 @@ class Json
         foreach ($this->entries_custom_fields as &$field)
         {
           //call our custom callback for this fieldtype if it exists
-          if (isset($entry[$field['field_name']]) && is_callable(array($this, 'entries_'.$field['field_type'])))
+          if (is_callable(array($this, 'entries_'.$field['field_type'])))
           {
             $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
           }
@@ -707,7 +708,7 @@ class Json
 
     return $field_data;
   }
-
+  
   protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
     return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
   }
@@ -934,15 +935,15 @@ class Json
     );
 
     if (version_compare(APP_VER, '2.6', '<'))
-    {
+    { 
       $default_fields[] = 'm.daylight_savings';
     }
-
+    
     $query = ee()->db->select('m_field_id, m_field_name')
                      ->get('member_fields');
 
     $custom_fields = $query->result_array();
-
+    
     $query->free_result();
 
     $select = array();
@@ -1029,8 +1030,7 @@ class Json
           $member[$field] = $this->date_format($member[$field]);
         }
       }
-    }
-
+    }    
     //  ----------------------------------------
     // 'json_plugin_members_end' hook.
     //  - Enables additional manipulation of entry data
@@ -1153,4 +1153,4 @@ class Json
 }
 
 /* End of file pi.json.php */
-/* Location: ./system/expressionengine/third_party/json/pi.json.php */
+/* Location: ./system/user/addons/json/pi.json.php */
