@@ -160,7 +160,7 @@ Plus all of the custom fields associated with that channel
 
 #### json:entries Parameters
 
-See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
+See [channel:entries parameters](https://docs.expressionengine.com/latest/channels/entries.html#parameters).
 
 ##### `show_categories="yes"`
 
@@ -346,7 +346,7 @@ json:search must be paired with {exp:search:simple_form} or {exp:search:advanced
 
 #### json:search Parameters
 
-See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
+See [channel:entries parameters](https://docs.expressionengine.com/latest/channels/entries.html#parameters).
 
 ##### `search_id="{segment_3}"`
 
@@ -468,7 +468,7 @@ function yourCallbackFunction(data) {
 ### v1.1.9
 
 - EE3 compatibility
-- Added relationships support for grids as per [ahebrank's](https://github.com/ahebrank) [commit](https://github.com/rsanchez/json/pull/65)
+- Added relationships support for grids as per [ahebrank's commit](https://github.com/rsanchez/json/pull/65)
 - Added `/system/user/addons/json/addon.setup.php` for EE3
 - Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
 - **Note:** not tested with Assets, Matrix and Playa
