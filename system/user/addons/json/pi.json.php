@@ -146,7 +146,7 @@ class Json
       {
         if (empty($this->fields) || in_array($field['field_name'], $this->fields))
         { 
-          $select[] = 'cdf'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+          $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
         }
       }
 
@@ -159,7 +159,7 @@ class Json
       ee()->db->select(implode(', ', $select), FALSE)->from('channel_titles t');
       foreach ($this->entries_custom_fields as &$field)
       {
-        ee()->db->join('channel_data_field_'.$field['field_id'].' cdf'.$field['field_id'], 't.entry_id = cdf'.$field['field_id'].'.entry_id');
+        ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
       }
       ee()->db->where_in('t.entry_id', $this->entries_entry_ids);
 
@@ -933,7 +933,7 @@ class Json
 
     $default_fields = array(
       'm.member_id',
-      'm.group_id',
+      'm.role_id',
       'm.username',
       'm.screen_name',
       'm.email',
@@ -957,11 +957,6 @@ class Json
       'm.language',
       'm.timezone',
     );
-
-    if (version_compare(APP_VER, '6.0.0', '>='))
-    { // change 'm.group_id' to 'm.role_id' for EE6+
-      $default_fields[1] = 'm.role_id';
-    }
 
     $query = ee()->db->select('m_field_id, m_field_name')
                      ->get('member_fields');
@@ -993,13 +988,14 @@ class Json
     {
       if (empty($this->fields) || in_array($field['m_field_name'], $this->fields))
       {
-        $select[] = 'd.'.ee()->db->protect_identifiers('m_field_id_'.$field['m_field_id']).' AS '.ee()->db->protect_identifiers($field['m_field_name']);
+        $select[] = 'mdf_'.$field['m_field_id'].'.m_field_id_'.$field['m_field_id'].' AS '.ee()->db->protect_identifiers($field['m_field_name']);
       }
     }
 
-    ee()->db->select(implode(', ', $select), FALSE)
-            ->from('members m')
-            ->join('member_data d', 'm.member_id = d.member_id');
+    ee()->db->select(implode(', ', $select), FALSE)->from('members m');
+    foreach ($custom_fields as &$field) {
+      ee()->db->join('member_data_field_'.$field['m_field_id'].' mdf_'.$field['m_field_id'], 'mdf_'.$field['m_field_id'].'.member_id = m.member_id');
+    }
 
     if ($member_ids = ee()->TMPL->fetch_param('member_id'))
     {
@@ -1177,5 +1173,5 @@ class Json
   }
 }
 
-/* End of file pi.json_output.php */
-/* Location: ./system/user/addons/json/pi.json_output.php */
+/* End of file pi.json.php */
+/* Location: ./system/user/addons/json/pi.json.php */

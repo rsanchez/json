@@ -4,9 +4,9 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 4 or 5
-
-For versions EE 2.6+ to EE3.x use JSON version [1.1.9](https://github.com/zignature/json/releases/tag/v1.1.9).
+- ExpressionEngine 6
+- For ExpressionEngine 4.x and 5.x use JSON version [2.0.0](https://github.com/zignature/json/releases/tag/v2.0.0).
+- For ExpressionEngine 2.6+ and 3.x use JSON version [1.1.9](https://github.com/zignature/json/releases/tag/v1.1.9).
 
 ## Warning
 
@@ -450,6 +450,14 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v3.0.0
+
+- ExpressionEngine 6 required
+- Several changes to the code due to database changes
+- Added `/system/user/addons/json/icon.png` for the control panel
+- Fluid fieldtype not supported
+- **Note:** not tested with Assets, Matrix and Playa
+
 ### v2.0.0
 
 - ExpressionEngine 4 or 5 required
@@ -460,14 +468,10 @@ function yourCallbackFunction(data) {
 ### v1.1.9
 
 - EE3 compatibility
-- Added relationships support for grids by [ahebrank](https://github.com/ahebrank)
-- Added `system/user/addons/json/addon.setup.php` for EE3
-- Added `system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
-<<<<<<< Updated upstream
-- **Note:** not tested with Playa, Assets and Matrix
-=======
+- Added relationships support for grids as per [ahebrank's](https://github.com/ahebrank) [commit](https://github.com/rsanchez/json/pull/65)
+- Added `/system/user/addons/json/addon.setup.php` for EE3
+- Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
 - **Note:** not tested with Assets, Matrix and Playa
->>>>>>> Stashed changes
 
 ### v1.1.8
 
