@@ -4,16 +4,23 @@ Output ExpressionEngine data in JSON format.
 
 ## Requirements
 
-- ExpressionEngine 6
-- For ExpressionEngine 4.x and 5.x use JSON version [2.0.0](https://github.com/zignature/json/releases/tag/v2.0.0).
+- ExpressionEngine 4.x, 5.x or 6.x
 - For ExpressionEngine 2.6+ and 3.x use JSON version [1.1.9](https://github.com/zignature/json/releases/tag/v1.1.9).
 
-## Warning
+## Warnings
 
 ***Not tested with Assets, Matrix and Playa fieldtypes!***
 
 I don't own Assets, Matrix and Playa modules, so if you use Assets, Matrix or Playa fields I recommend to verify whether changes to the code are required and to test this plugin on a local or development server before using it on a production/live server.
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
+
+***No duplicate custom fields in channels***
+
+Since EE4 it is possible to use custom fields outside of field groups as well as inside field groups. This plugin will not work when a custom field is assigned as a standalone custom field as well as a grouped custom field within the same channel. You need to choose to use either a grouped custom field or a standalone custom field.
+
+***Fluid fieldtype***
+
+Fluid fieldtype is not supported.
 
 ## Installation
 
@@ -160,7 +167,7 @@ Plus all of the custom fields associated with that channel
 
 #### json:entries Parameters
 
-See [channel:entries parameters](https://docs.expressionengine.com/latest/channels/entries.html#parameters).
+See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
 
 ##### `show_categories="yes"`
 
@@ -346,7 +353,7 @@ json:search must be paired with {exp:search:simple_form} or {exp:search:advanced
 
 #### json:search Parameters
 
-See [channel:entries parameters](https://docs.expressionengine.com/latest/channels/entries.html#parameters).
+See [channel:entries parameters](http://expressionengine.com/user_guide/modules/channel/parameters.html).
 
 ##### `search_id="{segment_3}"`
 
@@ -450,25 +457,20 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
-### v3.0.0
+### v2.5.0
 
-- ExpressionEngine 6 required
+- ExpressionEngine 4+ compatibility
 - Several changes to the code due to database changes
+- Added support for File Grid fieldtype
+- Added support for legacy custom fields and data (EE2 and EE3 custom fields and data)
 - Added `/system/user/addons/json/icon.png` for the control panel
-- Fluid fieldtype not supported
-- **Note:** not tested with Assets, Matrix and Playa
-
-### v2.0.0
-
-- ExpressionEngine 4 or 5 required
-- Several changes to the code due to database changes
 - Fluid fieldtype not supported
 - **Note:** not tested with Assets, Matrix and Playa
 
 ### v1.1.9
 
 - EE3 compatibility
-- Added relationships support for grids as per [ahebrank's commit](https://github.com/rsanchez/json/pull/65)
+- Added relationships support for grids as per [ahebrank's](https://github.com/ahebrank) [commit](https://github.com/rsanchez/json/pull/65)
 - Added `/system/user/addons/json/addon.setup.php` for EE3
 - Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
 - **Note:** not tested with Assets, Matrix and Playa

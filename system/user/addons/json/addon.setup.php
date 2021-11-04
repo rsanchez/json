@@ -1,12 +1,12 @@
 <?php
 /*
  *
- * Requires ExpressionEngine 6.
+ * Requires ExpressionEngine 4.x, 5.x or 6.x.
  * Older versions of ExpressionEngine are not supported.
- * 
- * EE6 compatibility created by Zignature.
+ *
+ * EE4-EE6 compatibility created by Zignature.
  * https://github.com/zignature/json
- * 
+ *
  */
 return array(
 	'author'			=> 'Rob Sanchez',
@@ -15,6 +15,6 @@ return array(
 	'docs_url'			=> 'https://github.com/rsanchez/json',
 	'name'				=> 'JSON',
 	'settings_exist'	=> FALSE,
-	'version'			=> '3.0.0',
+	'version'			=> '2.5.0',
 	'namespace'			=> 'rsanchez/json'
 );

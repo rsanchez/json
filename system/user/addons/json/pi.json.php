@@ -101,15 +101,27 @@ class Json
 
     if ($this->entries_entry_ids)
     {
-      $this->entries_custom_fields = ee()->db->select('channel_fields.*')
-                                            ->from('channel_fields')
-                                            ->join('channel_field_groups_fields', 'channel_fields.field_id = channel_field_groups_fields.field_id')
-                                            ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
-                                            ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
-                                            ->where('channels.site_id', ee()->config->item('site_id'))
-                                            ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
-                                            ->get()
-                                            ->result_array();
+      $get_grouped_custom_fields = ee()->db->select('channel_fields.*')
+          ->from('channel_fields')
+          ->join('channel_field_groups_fields', 'channel_fields.field_id = channel_field_groups_fields.field_id')
+          ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
+          ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
+          ->where('channels.site_id', ee()->config->item('site_id'))
+          ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
+          ->get()
+          ->result_array();
+
+      $get_ungrouped_custom_fields = ee()->db->select('channel_fields.*')
+          ->from('channel_fields')
+          ->join('channels_channel_fields', 'channel_fields.field_id = channels_channel_fields.field_id')
+          ->join('channels', 'channels_channel_fields.channel_id = channels.channel_id')
+          ->where('channels.site_id', ee()->config->item('site_id'))
+          ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
+          ->get()
+          ->result_array();
+
+      $this->entries_custom_fields = array_merge($get_grouped_custom_fields, $get_ungrouped_custom_fields);
+
 
       $default_fields = array(
         't.title',
@@ -145,8 +157,16 @@ class Json
       foreach ($this->entries_custom_fields as &$field)
       {
         if (empty($this->fields) || in_array($field['field_name'], $this->fields))
-        { 
-          $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+        {
+          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) AND ee()->db->field_exists('field_id_'.$field['field_id'], 'channel_data_field_'.$field['field_id']) )
+          {
+            $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+          }
+          // Legacy data?
+          else
+          {
+            $select[] = 'cd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+          }
         }
       }
 
@@ -156,12 +176,22 @@ class Json
         $select[] = 't.entry_id';
       }
 
-      ee()->db->select(implode(', ', $select), FALSE)->from('channel_titles t');
+
+      ee()->db->select(implode(', ', $select), FALSE)
+          ->from('channel_titles t');
       foreach ($this->entries_custom_fields as &$field)
       {
-        ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
+        if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) )
+        {
+          ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
+        }
       }
+
+      // legacy data
+      ee()->db->join('channel_data cd', 't.entry_id = cd.entry_id');
+
       ee()->db->where_in('t.entry_id', $this->entries_entry_ids);
+
 
       if ($order_by_string)
       {
@@ -295,17 +325,7 @@ class Json
 
     ee()->load->library('typography');
 
-    //  ----------------------------------------
-    // 'json_plugin_entries_end' hook.
-    //  - Enables additional manipulation of entry data
-    //  ----------------------------------------
 
-    // if (ee()->extensions->active_hook('json_plugin_entries_end') === TRUE)
-    // {
-    //   ee()->extensions->call('json_plugin_entries_end', $this);
-    //   if (ee()->extensions->end_script === TRUE) return;
-    // }
-    //  ----------------------------------------
 
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
@@ -374,6 +394,71 @@ class Json
   }
 
   protected function entries_grid($entry_id, $field, $field_data)
+  {
+    if ( ! isset($this->entries_grid_rows[$field['field_id']]))
+    {
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+                       ->order_by('row_order')
+                       ->get('channel_grid_field_'.$field['field_id']);
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_grid_rows[$field['field_id']][$row['entry_id']]))
+        {
+          $this->entries_grid_rows[$field['field_id']][$row['entry_id']] = array();
+        }
+
+        $this->entries_grid_rows[$field['field_id']][$row['entry_id']][] = $row;
+      }
+
+      $query->free_result();
+    }
+
+    if (is_null($this->entries_grid_cols))
+    {
+      $query = ee()->db->order_by('col_order', 'ASC')
+                       ->get('grid_columns');
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_grid_cols[$row['field_id']]))
+        {
+          $this->entries_grid_cols[$row['field_id']] = array();
+        }
+
+        $this->entries_grid_cols[$row['field_id']][$row['col_id']] = $row;
+      }
+
+      $query->free_result();
+    }
+
+    $data = array();
+
+    if (isset($this->entries_grid_rows[$field['field_id']][$entry_id]) && isset($this->entries_grid_cols[$field['field_id']]))
+    {
+      foreach ($this->entries_grid_rows[$field['field_id']][$entry_id] as $grid_row)
+      {
+        $row = array('row_id' => (int) $grid_row['row_id']);
+
+        foreach ($this->entries_grid_cols[$field['field_id']] as $col_id => $col)
+        {
+          // $row[$col['col_name']] = $grid_row['col_id_'.$col_id];
+          $val = $grid_row['col_id_' . $col_id];
+          if ($col['col_type'] == 'relationship')
+          {
+            $val = $this->entries_grid_relationship($col_id, $row['row_id'], $entry_id);
+          }
+          $row[$col['col_name']] = $val;
+        }
+
+        $data[] = $row;
+      }
+    }
+
+    return $data;
+  }
+
+  protected function entries_file_grid($entry_id, $field, $field_data)
   {
     if ( ! isset($this->entries_grid_rows[$field['field_id']]))
     {
@@ -740,7 +825,7 @@ class Json
 
     return $field_data;
   }
-  
+
   protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
     return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
   }
@@ -933,7 +1018,7 @@ class Json
 
     $default_fields = array(
       'm.member_id',
-      'm.role_id',
+      'm.group_id',
       'm.username',
       'm.screen_name',
       'm.email',
@@ -957,6 +1042,12 @@ class Json
       'm.language',
       'm.timezone',
     );
+
+    // for backwards compatibility
+    if (version_compare(APP_VER, '6.0.0', '>='))
+    {
+      $default_fields[1] = "m.role_id";
+    }
 
     $query = ee()->db->select('m_field_id, m_field_name')
                      ->get('member_fields');
@@ -1050,18 +1141,8 @@ class Json
           $member[$field] = $this->date_format($member[$field]);
         }
       }
-    }    
-    //  ----------------------------------------
-    // 'json_plugin_members_end' hook.
-    //  - Enables additional manipulation of entry data
-    //  ----------------------------------------
+    }
 
-    // if (ee()->extensions->active_hook('json_plugin_members_end') === TRUE)
-    // {
-    //   $members = ee()->extensions->call('json_plugin_members_end', $members, $this);
-    //   if (ee()->extensions->end_script === TRUE) return;
-    // }
-    //  ----------------------------------------
 
     return $this->respond($members);
   }
@@ -1145,7 +1226,7 @@ class Json
     }
 
     $response = function_exists('json_encode')
-      ? json_encode($response)
+      ? json_encode($response) // json_encode($response,JSON_PRETTY_PRINT) for development
       : ee()->javascript->generate_json($response, TRUE);
 
     if ( ! is_null($callback))
