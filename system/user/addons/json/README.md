@@ -462,9 +462,8 @@ function yourCallbackFunction(data) {
 - ExpressionEngine 4.x, 5.x or 6.x required
 - Several changes to the code due to database changes
 - Added support for File Grid fieldtype
-- Added support for legacy custom fields and data (EE2 and EE3 custom fields and data)
+- Added support for legacy custom fields and data (EE2 and EE3 custom fields and data) for compatibility with upgraded versions of EE
 - Added `/system/user/addons/json/icon.png` for the control panel
-- Fluid fieldtype not supported
 - **Note:** not tested with Assets, Matrix and Playa
 
 ### v1.1.9
