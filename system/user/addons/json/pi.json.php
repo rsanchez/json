@@ -107,6 +107,7 @@ class Json
           ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
           ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
+          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
@@ -116,6 +117,7 @@ class Json
           ->join('channels_channel_fields', 'channel_fields.field_id = channels_channel_fields.field_id')
           ->join('channels', 'channels_channel_fields.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
+          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
@@ -158,14 +160,15 @@ class Json
       {
         if (empty($this->fields) || in_array($field['field_name'], $this->fields))
         {
-          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) AND ee()->db->field_exists('field_id_'.$field['field_id'], 'channel_data_field_'.$field['field_id']) )
+
+          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) )
           {
             $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
           }
-          // We got legacy data
+          // We got legacy channel data, let's get it
           else
           {
-            $select[] = 'cd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+            $select[] = 'lcd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
           }
         }
       }
@@ -177,7 +180,6 @@ class Json
       }
 
 
-      $flag_legacy_data = FALSE;
       ee()->db->select(implode(', ', $select), FALSE)
           ->from('channel_titles t');
       foreach ($this->entries_custom_fields as &$field)
@@ -186,13 +188,15 @@ class Json
         {
           ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
         }
+        // We got legacy channel data, let's join it
         else
         {
-          if ($flag_legacy_data == FALSE) {
-            // join legacy data
-            ee()->db->join('channel_data cd', 't.entry_id = cd.entry_id');
-            // Set flag because we want this JOIN only once!
-            $flag_legacy_data = TRUE;
+          // Make sure the legacy channel data has not already been joined
+          if ( ! isset($is_legacy_data_joined) ) {
+            // join legacy channel data
+            ee()->db->join('channel_data lcd', 't.entry_id = lcd.entry_id');
+            // Set flag because we want this join only once!
+            $is_legacy_data_joined = TRUE;
           }
         }
       }
@@ -274,7 +278,7 @@ class Json
 
         foreach ($this->entries_custom_fields as &$field)
         {
-          // check for file grid fieldtype and, if found, "convert" it to grid fieldtype
+          // check for file grid fieldtype, if found "convert" it to grid fieldtype
           $field_type = $field['field_type'];
           if ( $field_type == "file_grid" ) $field_type = "grid";
 
@@ -340,6 +344,7 @@ class Json
 
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
+
 
   protected function entries_matrix($entry_id, $field, $field_data)
   {
@@ -408,9 +413,11 @@ class Json
   {
     if ( ! isset($this->entries_grid_rows[$field['field_id']]))
     {
-      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+      $query = ee()->db->where('fluid_field_data_id', '0')
+                       ->where_in('entry_id', $this->entries_entry_ids)
                        ->order_by('row_order')
                        ->get('channel_grid_field_'.$field['field_id']);
+
 
       foreach ($query->result_array() as $row)
       {
@@ -1171,7 +1178,7 @@ class Json
     }
 
     $response = function_exists('json_encode')
-      // ? json_encode($response,JSON_PRETTY_PRINT)
+      /* ? json_encode($response,JSON_PRETTY_PRINT) */
       ? json_encode($response)
       : ee()->javascript->generate_json($response, TRUE);
 

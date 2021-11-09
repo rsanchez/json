@@ -1,7 +1,5 @@
 # JSON #
 
-Output ExpressionEngine data in JSON format.
-
 ## Requirements
 
 - ExpressionEngine 4.x, 5.x or 6.x
@@ -458,13 +456,18 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v2.5.1
+
+- Bugfix: removed all remnants of (wrongful) fluid field data
+- [Feature Request]: Fluid Field integration. Too complex for me at the moment...
+
 ### v2.5.0
 
 - ExpressionEngine 4+ compatibility
 - Several changes to the code due to database changes
 - Added support for File Grid fieldtype
 - Added support for legacy custom fields and data (EE2 and EE3 custom fields and data) for compatibility with upgraded versions of EE
-- Added `/system/user/addons/json/icon.png` for the control panel
+- Added `/system/user/addons/json/icon.png` for the EE6 control panel
 - **Note:** not tested with Assets, Matrix and Playa
 
 ### v1.1.9
@@ -475,6 +478,8 @@ function yourCallbackFunction(data) {
 - Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
 - **Note:** not tested with Assets, Matrix and Playa
 
-## Acknowledgement
+## Attribution
 
-This plugin is a fork of the excellent [JSON plugin](https://github.com/rsanchez/json) by Rob [Sanchez](https://github.com/rsanchez).
+This plugin is a fork of the excellent [JSON plugin](https://github.com/rsanchez/json) by [Rob Sanchez](https://github.com/rsanchez).
+
+Since I'm a jack of all trades and master of none, I could have never done this without the jumpstart Rob Sanchez's plugin gave me.
