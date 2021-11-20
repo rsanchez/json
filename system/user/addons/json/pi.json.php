@@ -30,13 +30,13 @@ class Json
   {
     $this->initialize('entries');
 
-    // exit if ajax request is required and not found
+    //exit if ajax request is required and not found
     if ($this->check_xhr_required())
     {
       return '';
     }
 
-    // instantiate channel module object
+    //instantiate channel module object
     if (empty($this->channel))
     {
       require_once PATH_MOD.'channel/mod.channel.php';
@@ -55,7 +55,7 @@ class Json
     }
     else
     {
-      // run through the channel module process to grab the entries
+      //run through the channel module process to grab the entries
       $this->channel->uri = ($this->channel->query_string != '') ? $this->channel->query_string : 'index.php';
 
       if ($this->channel->enable['custom_fields'] === TRUE)
@@ -107,7 +107,6 @@ class Json
           ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
           ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
-          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
@@ -117,7 +116,6 @@ class Json
           ->join('channels_channel_fields', 'channel_fields.field_id = channels_channel_fields.field_id')
           ->join('channels', 'channels_channel_fields.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
-          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
@@ -160,20 +158,19 @@ class Json
       {
         if (empty($this->fields) || in_array($field['field_name'], $this->fields))
         {
-
-          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) )
+          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) AND ee()->db->field_exists('field_id_'.$field['field_id'], 'channel_data_field_'.$field['field_id']) )
           {
             $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
           }
-          // We got legacy channel data, let's get it
+          // Legacy data?
           else
           {
-            $select[] = 'lcd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
+            $select[] = 'cd.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
           }
         }
       }
 
-      // we need entry_id, always grab it
+      //we need entry_id, always grab it
       if ( ! in_array('t.entry_id', $select))
       {
         $select[] = 't.entry_id';
@@ -188,18 +185,10 @@ class Json
         {
           ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
         }
-        // We got legacy channel data, let's join it
-        else
-        {
-          // Make sure the legacy channel data has not already been joined
-          if ( ! isset($is_legacy_data_joined) ) {
-            // join legacy channel data
-            ee()->db->join('channel_data lcd', 't.entry_id = lcd.entry_id');
-            // Set flag because we want this join only once!
-            $is_legacy_data_joined = TRUE;
-          }
-        }
       }
+
+      // legacy data
+      ee()->db->join('channel_data cd', 't.entry_id = cd.entry_id');
 
       ee()->db->where_in('t.entry_id', $this->entries_entry_ids);
 
@@ -260,7 +249,7 @@ class Json
           unset($entry['yearweek']);
         }
 
-        // format dates as javascript unix time (in microseconds!)
+        //format dates as javascript unix time (in microseconds!)
         if (isset($entry['entry_date']))
         {
           $entry['entry_date'] = $this->date_format($entry['entry_date']);
@@ -278,14 +267,10 @@ class Json
 
         foreach ($this->entries_custom_fields as &$field)
         {
-          // check for file grid fieldtype, if found "convert" it to grid fieldtype
-          $field_type = $field['field_type'];
-          if ( $field_type == "file_grid" ) $field_type = "grid";
-
-          // call our custom callback for this fieldtype if it exists
-          if (is_callable(array($this, 'entries_'.$field_type)))
+          //call our custom callback for this fieldtype if it exists
+          if (is_callable(array($this, 'entries_'.$field['field_type'])))
           {
-            $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field_type), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
+            $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field['field_type']), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
           }
         }
 
@@ -344,7 +329,6 @@ class Json
 
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
-
 
   protected function entries_matrix($entry_id, $field, $field_data)
   {
@@ -413,11 +397,74 @@ class Json
   {
     if ( ! isset($this->entries_grid_rows[$field['field_id']]))
     {
-      $query = ee()->db->where('fluid_field_data_id', '0')
-                       ->where_in('entry_id', $this->entries_entry_ids)
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
                        ->order_by('row_order')
                        ->get('channel_grid_field_'.$field['field_id']);
 
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_grid_rows[$field['field_id']][$row['entry_id']]))
+        {
+          $this->entries_grid_rows[$field['field_id']][$row['entry_id']] = array();
+        }
+
+        $this->entries_grid_rows[$field['field_id']][$row['entry_id']][] = $row;
+      }
+
+      $query->free_result();
+    }
+
+    if (is_null($this->entries_grid_cols))
+    {
+      $query = ee()->db->order_by('col_order', 'ASC')
+                       ->get('grid_columns');
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_grid_cols[$row['field_id']]))
+        {
+          $this->entries_grid_cols[$row['field_id']] = array();
+        }
+
+        $this->entries_grid_cols[$row['field_id']][$row['col_id']] = $row;
+      }
+
+      $query->free_result();
+    }
+
+    $data = array();
+
+    if (isset($this->entries_grid_rows[$field['field_id']][$entry_id]) && isset($this->entries_grid_cols[$field['field_id']]))
+    {
+      foreach ($this->entries_grid_rows[$field['field_id']][$entry_id] as $grid_row)
+      {
+        $row = array('row_id' => (int) $grid_row['row_id']);
+
+        foreach ($this->entries_grid_cols[$field['field_id']] as $col_id => $col)
+        {
+          // $row[$col['col_name']] = $grid_row['col_id_'.$col_id];
+          $val = $grid_row['col_id_' . $col_id];
+          if ($col['col_type'] == 'relationship')
+          {
+            $val = $this->entries_grid_relationship($col_id, $row['row_id'], $entry_id);
+          }
+          $row[$col['col_name']] = $val;
+        }
+
+        $data[] = $row;
+      }
+    }
+
+    return $data;
+  }
+
+  protected function entries_file_grid($entry_id, $field, $field_data)
+  {
+    if ( ! isset($this->entries_grid_rows[$field['field_id']]))
+    {
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+                       ->order_by('row_order')
+                       ->get('channel_grid_field_'.$field['field_id']);
 
       foreach ($query->result_array() as $row)
       {
@@ -779,7 +826,8 @@ class Json
     return $field_data;
   }
 
-  protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
+  protected function entries_wygwam($entry_id, $field, $field_data, $entry)
+  {
     return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
   }
 
@@ -821,7 +869,7 @@ class Json
     {
       $source_type = $row['source_type'];
       $filedir_id = $row['filedir_id'];
-      // excise any other fields from this row
+      //excise any other fields from this row
       $row = array_intersect_key($row, array_flip($fields));
       $row['file_id'] = (int) $row['file_id'];
       $row['date'] = $this->date_format($row['date']);
@@ -996,6 +1044,7 @@ class Json
       'm.timezone',
     );
 
+    // for backwards compatibility
     if (version_compare(APP_VER, '6.0.0', '>='))
     {
       $default_fields[1] = "m.role_id";
@@ -1056,8 +1105,7 @@ class Json
 
     if (ee()->TMPL->fetch_param('group_id'))
     {
-      $m_group_id = version_compare(APP_VER, '6.0.0', '>=') ? 'm.role_id' : 'm.group_id';
-      ee()->db->where_in($m_group_id, explode('|', ee()->TMPL->fetch_param('group_id')));
+      ee()->db->where_in('m.group_id', explode('|', ee()->TMPL->fetch_param('group_id')));
     }
 
     if (ee()->TMPL->fetch_param('limit'))
@@ -1105,7 +1153,7 @@ class Json
     switch($which)
     {
       case 'entries':
-        // initialize caches
+        //initialize caches
         $this->entries = array();
         $this->entries_entry_ids = array();
         $this->entries_custom_fields = array();
@@ -1179,8 +1227,7 @@ class Json
     }
 
     $response = function_exists('json_encode')
-      // ? json_encode($response,JSON_PRETTY_PRINT)
-      ? json_encode($response)
+      ? json_encode($response,JSON_PRETTY_PRINT) // json_encode($response,JSON_PRETTY_PRINT) for development
       : ee()->javascript->generate_json($response, TRUE);
 
     if ( ! is_null($callback))

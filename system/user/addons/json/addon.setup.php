@@ -1,23 +1,20 @@
 <?php
 /*
  *
- * Original author: Rob Sanchez
- * Original author URL: https://github.com/rsanchez
- * Original docs URL: https://github.com/rsanchez/json
- *
- * Requires ExpressionEngine 4.x, 5.x or 6.x.
+ * Requires ExpressionEngine 6.
  * Older versions of ExpressionEngine are not supported.
  *
- * EE4-EE6 compatibility created by Zignature.
+ * EE6 compatibility created by Zignature.
+ * https://github.com/zignature/json
  *
  */
 return array(
-	'author'			=> 'Zignature',
-	'author_url'		=> 'https://github.com/zignature',
+	'author'			=> 'Rob Sanchez',
+	'author_url'		=> 'https://github.com/rsanchez',
 	'description'		=> 'Output ExpressionEngine channel entries in JSON format.',
-	'docs_url'			=> 'https://github.com/zignature/json',
+	'docs_url'			=> 'https://github.com/rsanchez/json',
 	'name'				=> 'JSON',
 	'settings_exist'	=> FALSE,
-	'version'			=> '2.5.1',
-	'namespace'			=> 'zignature/json'
+	'version'			=> '2.5.0',
+	'namespace'			=> 'rsanchez/json'
 );
