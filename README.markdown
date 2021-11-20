@@ -456,6 +456,13 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v2.5.1
+
+- Bugfix: Removed all remnants of fluid field data, since the Fluid fieldtype is not (yet) supported. The remnant data is unusable at this point. Working on support for Fluid fieldtype
+- Bugfix: Updated the `members` function to fit EE6.x
+- Changed `addon.setup.php` and cleaned it up
+- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
+
 ### v2.5.0
 
 - ExpressionEngine 4+ compatibility
