@@ -458,27 +458,29 @@ function yourCallbackFunction(data) {
 
 ### v2.5.1
 
-- Bugfix: removed all remnants of (wrongful) fluid field data
-- [Feature Request]: Fluid Field integration. Too complex for me at the moment...
+- Bugfix: Removed all remnants of fluid field data, since the Fluid fieldtype is not (yet) supported the remnant data is unusable at this point. Working on support for Fluid fieldtype
+- Bugfix: Updated the `members` function to fit EE6.x
+- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
 
 ### v2.5.0
 
 - ExpressionEngine 4+ compatibility
 - Several changes to the code due to database changes
 - Added support for File Grid fieldtype
-- Added support for legacy custom fields and data (EE2 and EE3 custom fields and data) for compatibility with upgraded versions of EE
+- Added support for legacy custom fields and data (EE2 and EE3 custom fields and data) for compatibility with upgraded versions of EE4+
 - Added `/system/user/addons/json/icon.png` for the EE6 control panel
-- **Note:** not tested with Assets, Matrix and Playa
+- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
 
 ### v1.1.9
 
 - EE3 compatibility
 - Added relationships support for grids as per [ahebrank's](https://github.com/ahebrank) [commit](https://github.com/rsanchez/json/pull/65)
-- Added `/system/user/addons/json/addon.setup.php` for EE3+
+- Added `/system/user/addons/json/addon.setup.php` for EE3
 - Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
 - **Note:** not tested with Assets, Matrix and Playa
 
 ## Attribution
 
-This plugin is a fork of the excellent [JSON plugin](https://github.com/rsanchez/json) by Rob [Sanchez](https://github.com/rsanchez).
+This plugin is a fork of the excellent [JSON plugin](https://github.com/rsanchez/json) by [Rob Sanchez](https://github.com/rsanchez).
+
 Since I'm a jack of all trades and master of none, I could have never done this without the jumpstart Rob Sanchez's plugin gave me.

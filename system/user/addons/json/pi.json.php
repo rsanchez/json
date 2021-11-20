@@ -1056,7 +1056,8 @@ class Json
 
     if (ee()->TMPL->fetch_param('group_id'))
     {
-      ee()->db->where_in('m.group_id', explode('|', ee()->TMPL->fetch_param('group_id')));
+      $m_group_id = version_compare(APP_VER, '6.0.0', '>=') ? 'm.role_id' : 'm.group_id';
+      ee()->db->where_in($m_group_id, explode('|', ee()->TMPL->fetch_param('group_id')));
     }
 
     if (ee()->TMPL->fetch_param('limit'))
@@ -1178,7 +1179,7 @@ class Json
     }
 
     $response = function_exists('json_encode')
-      /* ? json_encode($response,JSON_PRETTY_PRINT) */
+      // ? json_encode($response,JSON_PRETTY_PRINT)
       ? json_encode($response)
       : ee()->javascript->generate_json($response, TRUE);
 
