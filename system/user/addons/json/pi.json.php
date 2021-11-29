@@ -8,6 +8,7 @@ class Json
   protected $xhr = FALSE;
   protected $fields = array();
   protected $date_format = FALSE;
+  protected $json_pretty_print = FALSE;
   protected $jsonp = FALSE;
   protected $callback;
 
@@ -15,13 +16,10 @@ class Json
   public $entries;
   public $entries_entry_ids;
   public $entries_custom_fields;
-  protected $entries_matrix_rows;
-  protected $entries_matrix_cols;
   protected $entries_grid_rows;
   protected $entries_grid_cols;
-  protected $entries_rel_data;
-  protected $entries_relationship_data;
-  protected $entries_grid_relationship_data;
+  protected $entries_matrix_rows;
+  protected $entries_matrix_cols;
   protected $entries_playa_data;
   protected $entries_channel_files_data;
   protected $image_manipulations = array();
@@ -39,7 +37,7 @@ class Json
     // instantiate channel module object
     if (empty($this->channel))
     {
-      require_once PATH_MOD.'channel/mod.channel.php';
+      require_once PATH_ADDONS.'channel/mod.channel.php';
 
       $this->channel = new Channel;
     }
@@ -107,7 +105,6 @@ class Json
           ->join('channels_channel_field_groups', 'channel_field_groups_fields.group_id = channels_channel_field_groups.group_id')
           ->join('channels', 'channels_channel_field_groups.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
-          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
@@ -117,13 +114,11 @@ class Json
           ->join('channels_channel_fields', 'channel_fields.field_id = channels_channel_fields.field_id')
           ->join('channels', 'channels_channel_fields.channel_id = channels.channel_id')
           ->where('channels.site_id', ee()->config->item('site_id'))
-          ->where('channel_fields.field_type !=', 'fluid_field')
           ->where_in('channels.channel_name', explode('|', ee()->TMPL->fetch_param('channel')))
           ->get()
           ->result_array();
 
       $this->entries_custom_fields = array_merge($get_grouped_custom_fields, $get_ungrouped_custom_fields);
-
 
       $default_fields = array(
         't.title',
@@ -161,7 +156,7 @@ class Json
         if (empty($this->fields) || in_array($field['field_name'], $this->fields))
         {
 
-          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) )
+          if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) AND $field['legacy_field_data'] === 'n' )
           {
             $select[] = 'cdf_'.$field['field_id'].'.'.ee()->db->protect_identifiers('field_id_'.$field['field_id']).' AS '.ee()->db->protect_identifiers($field['field_name']);
           }
@@ -184,7 +179,7 @@ class Json
           ->from('channel_titles t');
       foreach ($this->entries_custom_fields as &$field)
       {
-        if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) )
+        if ( ee()->db->table_exists('channel_data_field_'.$field['field_id']) AND $field['legacy_field_data'] === 'n' )
         {
           ee()->db->join('channel_data_field_'.$field['field_id'].' cdf_'.$field['field_id'], 't.entry_id = cdf_'.$field['field_id'].'.entry_id');
         }
@@ -280,12 +275,12 @@ class Json
         {
           // check for file grid fieldtype, if found "convert" it to grid fieldtype
           $field_type = $field['field_type'];
-          if ( $field_type == "file_grid" ) $field_type = "grid";
+          if ( $field_type == "file_grid" ) $field_type = 'grid';
 
           // call our custom callback for this fieldtype if it exists
           if (is_callable(array($this, 'entries_'.$field_type)))
           {
-            $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field_type), $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
+            $entry[$field['field_name']] = call_user_func(array($this, 'entries_'.$field_type), FALSE, $entry['entry_id'], $field, $entry[$field['field_name']], $entry);
           }
         }
 
@@ -340,84 +335,132 @@ class Json
 
     ee()->load->library('typography');
 
-
-
     return $this->respond($this->entries, array(ee()->typography, 'parse_file_paths'));
   }
 
 
-  protected function entries_matrix($entry_id, $field, $field_data)
+  protected function entries_fluid_field($in_fluid, $entry_id, $field, $field_data, $entry)
   {
-    if (is_null($this->entries_matrix_rows))
+    if ( ! function_exists('get_fluid_common_field') )
     {
-      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
-                       ->order_by('row_order')
-                       ->get('matrix_data');
-
-      foreach ($query->result_array() as $row)
+      function get_fluid_common_field($field_id, $field_data, $field_data_id, $field_type)
       {
-        if ( ! isset($this->entries_matrix_rows[$row['entry_id']]))
-        {
-          $this->entries_matrix_rows[$row['entry_id']] = array();
-        }
+        $query = ee()->db->select('fluid_field_data.*, channel_data_field_'.$field_id.'.field_id_'.$field_id)
+        ->from('fluid_field_data')
+        ->join('channel_data_field_'.$field_id, 'fluid_field_data.field_data_id = channel_data_field_'.$field_id.'.id')
+        ->where('fluid_field_data.field_id', $field_id)
+        ->where('fluid_field_data.field_data_id', $field_data_id)
+        ->get();
 
-        if ( ! isset($this->entries_matrix_rows[$row['entry_id']][$row['field_id']]))
-        {
-          $this->entries_matrix_rows[$row['entry_id']][$row['field_id']] = array();
-        }
+        $result = $query->result_array();
+        $data = array_shift($result);
+        $query->free_result();
 
-        $this->entries_matrix_rows[$row['entry_id']][$row['field_id']][] = $row;
+        switch ($field_type)
+        {
+          case 'text':
+
+            $field_settings = ee()->api_channel_fields->get_settings($field_id);
+
+            if ($field_settings['field_content_type'] === 'numeric' || $field_settings['field_content_type'] === 'decimal')
+            {
+              return floatval($data['field_id_'.$field_id]);
+            }
+
+            if ($field_settings['field_content_type'] === 'integer')
+            {
+              return intval($data['field_id_'.$field_id]);
+            }
+
+            return $data['field_id_'.$field_id];
+
+          break;
+
+
+          case 'date':
+
+            $date_format = ee()->TMPL->fetch_param('date_format');
+            // get rid of EE formatted dates
+            if ($date_format && strstr($date_format, '%'))
+            {
+              $date_format = str_replace('%', '', $date_format);
+            }
+
+            if ( ! isset($data['field_id_'.$field_id]))
+            {
+              return NULL;
+            }
+
+            return ($date_format) ? date($date_format, $data['field_id_'.$field_id]) : $data['field_id_'.$field_id] * 1000;
+
+          break;
+
+
+          default:
+
+            return $data['field_id_'.$field_id];
+        }
       }
-
-      $query->free_result();
     }
 
-    if (is_null($this->entries_matrix_cols))
-    {
-      $query = ee()->db->get('matrix_cols');
-
-      foreach ($query->result_array() as $row)
-      {
-        $this->entries_matrix_cols[$row['col_id']] = $row;
-      }
-
-      $query->free_result();
-    }
+    $query = ee()->db->select('fluid_field_data.*, channel_fields.*')
+                     ->from('fluid_field_data')
+                     ->join('channel_fields', 'fluid_field_data.field_id = channel_fields.field_id')
+                     ->where('entry_id', $entry_id)
+                     ->where('fluid_field_id', $field['field_id'])
+                     ->order_by('order', 'asc')
+                     ->get();
 
     $data = array();
 
-    if (isset($this->entries_matrix_rows[$entry_id][$field['field_id']]))
+    $special_field_types = array('grid', 'file_grid', 'relationship', 'assets', 'channel_files', 'matrix', 'playa', 'wygwam');
+
+    foreach ($query->result_array() AS $row)
     {
-      $field_settings = unserialize(base64_decode($field['field_settings']));
+      $field_type = $row['field_type'];
+      if ( $field_type == 'file_grid') $field_type = 'grid';
 
-      foreach ($this->entries_matrix_rows[$entry_id][$field['field_id']] as $matrix_row)
+      // use dedicated functions for special fieldtypes
+      if ( in_array($field_type, $special_field_types) )
       {
-        $row = array('row_id' => (int) $matrix_row['row_id']);
-
-        foreach ($field_settings['col_ids'] as $col_id)
+        if ( is_callable(array($this, 'entries_'.$field_type))  )
         {
-          if (isset($this->entries_matrix_cols[$col_id]))
-          {
-            $row[$this->entries_matrix_cols[$col_id]['col_name']] = $matrix_row['col_id_'.$col_id];
-          }
+          $data[$row['field_name']] = call_user_func(array($this, 'entries_'.$field_type), TRUE, $row['entry_id'], $row, $row['field_name'], $row['field_data_id']);
         }
-
-        $data[] = $row;
       }
+      else
+      {
+        $this_field_count = ee()->db->where('field_id', $row['field_id'])
+                                    ->get('fluid_field_data')
+                                    ->num_rows();
+
+        // if there are multiple entries of the same field, make an array
+        if ( $this_field_count > 1 )
+        {
+          $data[$row['field_name']][] = get_fluid_common_field($row['field_id'], $row['field_name'], $row['field_data_id'], $row['field_type']);
+        }
+        else
+        {
+          $data[$row['field_name']] = get_fluid_common_field($row['field_id'], $row['field_name'], $row['field_data_id'], $row['field_type']);
+        }
+      }
+
     }
+
+    $query->free_result();
 
     return $data;
   }
 
-  protected function entries_grid($entry_id, $field, $field_data)
+
+  protected function entries_grid($in_fluid, $entry_id, $field, $field_data, $entry)
   {
     if ( ! isset($this->entries_grid_rows[$field['field_id']]))
     {
-      $query = ee()->db->where('fluid_field_data_id', '0')
-                       ->where_in('entry_id', $this->entries_entry_ids)
+      $query = $in_fluid ? ee()->db->where('fluid_field_data_id !=', '0') : ee()->db->where('fluid_field_data_id', '0');
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
                        ->order_by('row_order')
                        ->get('channel_grid_field_'.$field['field_id']);
-
 
       foreach ($query->result_array() as $row)
       {
@@ -460,155 +503,234 @@ class Json
 
         foreach ($this->entries_grid_cols[$field['field_id']] as $col_id => $col)
         {
-          // $row[$col['col_name']] = $grid_row['col_id_'.$col_id];
           $val = $grid_row['col_id_' . $col_id];
           if ($col['col_type'] == 'relationship')
           {
-            $val = $this->entries_grid_relationship($col_id, $row['row_id'], $entry_id);
+            $val = $this->entries_grid_relationship($in_fluid, $col_id, $row['row_id'], $entry_id);
           }
           $row[$col['col_name']] = $val;
         }
 
         $data[] = $row;
+
       }
     }
+
+    // Reset in case this field comes back inside a fluid field
+    $this->entries_grid_rows[$field['field_id']] = NULL;
 
     return $data;
   }
 
-  protected function entries_rel($entry_id, $field, $field_data)
+
+  protected function entries_grid_relationship($in_fluid, $grid_col_id, $grid_row_id, $entry_id)
   {
-    if (is_null($this->entries_rel_data))
+    // First get the relationship ids
+    $query = ee()->db->select('parent_id, child_id, grid_field_id, grid_col_id, grid_row_id')
+                     ->where_in('parent_id', $this->entries_entry_ids)
+                     ->where('grid_col_id', $grid_col_id)
+                     ->order_by('order', 'asc')
+                     ->get('relationships');
+
+    $rel_ids = $query->result_array();
+    $query->free_result();
+
+    foreach ($rel_ids as $id)
     {
-      $query = ee()->db->select('rel_child_id, rel_id')
-                       ->where('rel_parent_id', $entry_id)
-                       ->get('relationships');
-
-      $this->entries_rel_data = array();
-
-      foreach ($query->result() as $row)
+      if ( ! isset($entries_grid_relationship_data[$grid_col_id][$id['parent_id']][$id['grid_row_id']]))
       {
-        $this->entries_rel_data[$row->rel_id] = (int) $row->rel_child_id;
+        $entries_grid_relationship_data[$grid_col_id][$id['parent_id']][$id['grid_row_id']] = array();
       }
+      // Now get the related data
+      $query = ee()->db->select('ct.entry_id, ct.channel_id, ct.title, ct.url_title, ct.author_id, m.username, c.channel_name')
+                       ->from('channel_titles ct')
+                       ->join('members m', 'ct.author_id = m.member_id')
+                       ->join('channels c', 'ct.channel_id = c.channel_id')
+                       ->where('entry_id', $id['child_id'])
+                       ->get();
 
+      $rel_data = $query->result_array();
       $query->free_result();
-    }
 
-    if ( ! isset($this->entries_rel_data[$field_data]))
-    {
-      return NULL;
-    }
-
-    return $this->entries_rel_data[$field_data];
-  }
-
-  protected function entries_relationship($entry_id, $field, $field_data)
-  {
-    if (is_null($this->entries_relationship_data))
-    {
-      $query = ee()->db->select('parent_id, child_id, field_id')
-                       ->where_in('parent_id', $this->entries_entry_ids)
-                       ->order_by('order', 'asc')
-                       ->get('relationships');
-
-      foreach ($query->result_array() as $row)
+      foreach ($rel_data as $datum)
       {
-        if ( ! isset($this->entries_relationship_data[$row['parent_id']]))
-        {
-          $this->entries_relationship_data[$row['parent_id']] = array();
-        }
-
-        if ( ! isset($this->entries_relationship_data[$row['parent_id']][$row['field_id']]))
-        {
-          $this->entries_relationship_data[$row['parent_id']][$row['field_id']] = array();
-        }
-
-        $this->entries_relationship_data[$row['parent_id']][$row['field_id']][] = (int) $row['child_id'];
+        $entries_grid_relationship_data[$grid_col_id][$id['parent_id']][$id['grid_row_id']][] = array(
+          'channel_id'   => (int) $datum['channel_id'],
+          'channel_name' => $datum['channel_name'],
+          'entry_id'     => (int) $datum['entry_id'],
+          'title'        => $datum['title'],
+          'url_title'    => $datum['url_title'],
+          'author_id'    => (int) $datum['author_id'],
+          'username'     => $datum['username']
+        );
       }
-
-      $query->free_result();
     }
 
-    if (isset($this->entries_relationship_data[$entry_id][$field['field_id']]))
+    if (isset($entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id]))
     {
-      return $this->entries_relationship_data[$entry_id][$field['field_id']];
+      return $entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id];
     }
 
     return array();
   }
 
-  protected function entries_grid_relationship($grid_col_id, $grid_row_id, $entry_id)
+
+  protected function entries_relationship($in_fluid, $entry_id, $field, $field_data)
   {
-    if (is_null($this->entries_grid_relationship_data))
+    // First get the relationship ids
+    $query = $in_fluid ? ee()->db->where('fluid_field_data_id !=', '0') : ee()->db->where('fluid_field_data_id', '0');
+    $query = ee()->db->select('parent_id, child_id, field_id')
+                     ->where_in('parent_id', $this->entries_entry_ids)
+                     ->order_by('order', 'asc')
+                     ->get('relationships');
+
+    $rel_ids = $query->result_array();
+    $query->free_result();
+
+    foreach ($rel_ids as $id)
     {
-      $query = ee()->db->select('parent_id, child_id, grid_field_id, grid_col_id, grid_row_id')
-                       ->where_in('parent_id', $this->entries_entry_ids)
-                       ->where('grid_col_id', $grid_col_id)
-                       ->order_by('order', 'asc')
-                       ->get('relationships');
-
-      foreach ($query->result_array() as $row)
+      if ( ! isset($entries_relationship_data[$id['parent_id']]))
       {
-        if ( ! isset($this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']]))
-        {
-          $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']] = array();
-        }
-
-        if ( ! isset($this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']]))
-        {
-          $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']] = array();
-        }
-
-        $this->entries_grid_relationship_data[$grid_col_id][$row['parent_id']][$row['grid_row_id']][] = (int) $row['child_id'];
+        $entries_relationship_data[$id['parent_id']] = array();
       }
 
+      if ( ! isset($entries_relationship_data[$id['parent_id']][$id['field_id']]))
+      {
+        $entries_relationship_data[$id['parent_id']][$id['field_id']] = array();
+      }
+      // Now get the related data
+      $query = ee()->db->select('ct.entry_id, ct.channel_id, ct.title, ct.url_title, ct.author_id, m.username, c.channel_name')
+                       ->from('channel_titles ct')
+                       ->join('members m', 'ct.author_id = m.member_id')
+                       ->join('channels c', 'ct.channel_id = c.channel_id')
+                       ->where('entry_id', $id['child_id'])
+                       ->get();
+
+      $rel_data = $query->result_array();
       $query->free_result();
+
+      foreach ($rel_data as $datum)
+      {
+        $entries_relationship_data[$id['parent_id']][$id['field_id']][] = array(
+          'channel_id'   => (int) $datum['channel_id'],
+          'channel_name' => $datum['channel_name'],
+          'entry_id'     => (int) $datum['entry_id'],
+          'title'        => $datum['title'],
+          'url_title'    => $datum['url_title'],
+          'author_id'    => (int) $datum['author_id'],
+          'username'     => $datum['username']
+        );
+      }
     }
 
-    if (isset($this->entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id]))
+    if (isset($entries_relationship_data[$entry_id][$field['field_id']]))
     {
-      return $this->entries_grid_relationship_data[$grid_col_id][$entry_id][$grid_row_id];
+      return $entries_relationship_data[$entry_id][$field['field_id']];
     }
 
     return array();
   }
 
-  protected function entries_playa($entry_id, $field, $field_data)
+
+  protected function entries_date($in_fluid, $entry_id, $field, $field_data, $field_data_id)
   {
-    if (is_null($this->entries_playa_data))
-    {
-      $query = ee()->db->select('parent_entry_id, child_entry_id, parent_field_id')
-                       ->where_in('parent_entry_id', $this->entries_entry_ids)
-                       ->order_by('rel_order', 'asc')
-                       ->get('playa_relationships');
+    if ( $in_fluid ) $field_data = call_user_func(array($this, 'get_fluid_channel_data_field'), $field['field_id'], $field_data_id);
 
-      foreach ($query->result_array() as $row)
-      {
-        if ( ! isset($this->entries_playa_data[$row['parent_entry_id']]))
-        {
-          $this->entries_playa_data[$row['parent_entry_id']] = array();
-        }
-
-        if ( ! isset($this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']]))
-        {
-          $this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']] = array();
-        }
-
-        $this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']][] = (int) $row['child_entry_id'];
-      }
-
-      $query->free_result();
-    }
-
-    if (isset($this->entries_playa_data[$entry_id][$field['field_id']]))
-    {
-      return $this->entries_playa_data[$entry_id][$field['field_id']];
-    }
-
-    return array();
+    return $this->date_format($field_data);
   }
 
-  protected function entries_channel_files($entry_id, $field, $field_data, $entry)
+
+  protected function entries_text($in_fluid, $entry_id, $field, $field_data, $field_data_id)
+  {
+    $field_settings = ee()->api_channel_fields->get_settings($field['field_id']);
+
+    if ( $in_fluid ) $field_data = call_user_func(array($this, 'get_fluid_channel_data_field'), $field['field_id'], $field_data_id);
+
+    if ($field_settings['field_content_type'] === 'numeric' || $field_settings['field_content_type'] === 'decimal')
+    {
+      return floatval($field_data);
+    }
+
+    if ($field_settings['field_content_type'] === 'integer')
+    {
+      return intval($field_data);
+    }
+
+    return $field_data;
+  }
+
+
+  protected function entries_assets($in_fluid, $entry_id, $field, $field_data, $entry)
+  {
+    $field_data = $this->entries_custom_field($in_fluid, $entry_id, $field, $field_data, $entry);
+
+    if ( ! is_array($field_data))
+    {
+      $field_data = array();
+    }
+
+    if (isset($field_data['absolute_total_files']) && $field_data['absolute_total_files'] === 0)
+    {
+      return array();
+    }
+
+    $fields = array(
+      'file_id',
+      'url',
+      'subfolder',
+      'filename',
+      'extension',
+      'date_modified',
+      'kind',
+      'width',
+      'height',
+      'size',
+      'title',
+      'date',
+      'alt_text',
+      'caption',
+      'author',
+      'desc',
+      'location',
+    );
+
+    foreach ($field_data as &$row)
+    {
+      $source_type = $row['source_type'];
+      $filedir_id = $row['filedir_id'];
+      // excise any other fields from this row
+      $row = array_intersect_key($row, array_flip($fields));
+      $row['file_id'] = (int) $row['file_id'];
+      $row['date'] = $this->date_format($row['date']);
+      $row['date_modified'] = $this->date_format($row['date_modified']);
+
+      $row['manipulations'] = array();
+
+      if ($source_type === 'ee')
+      {
+        if ( ! isset($this->image_manipulations[$filedir_id]))
+        {
+          ee()->load->model('file_model');
+
+          $query = ee()->file_model->get_dimensions_by_dir_id($filedir_id);
+
+          $this->image_manipulations[$filedir_id] = $query->result();
+
+          $query->free_result();
+        }
+
+        foreach ($this->image_manipulations[$filedir_id] as $manipulation)
+        {
+          $row['manipulations'][$manipulation->short_name] = pathinfo($row['url'], PATHINFO_DIRNAME).'/_'.$manipulation->short_name.'/'.basename($row['url']);
+        }
+      }
+    }
+
+    return $field_data;
+  }
+
+
+  protected function entries_channel_files($in_fluid, $entry_id, $field, $field_data, $entry)
   {
     $this->entries_channel_files_data = array();
 
@@ -720,29 +842,114 @@ class Json
     return array();
   }
 
-  protected function entries_date($entry_id, $field, $field_data)
-  {
-    return $this->date_format($field_data);
-  }
 
-  protected function entries_text($entry_id, $field, $field_data)
+  protected function entries_matrix($in_fluid, $entry_id, $field, $field_data)
   {
-    $field_settings = ee()->api_channel_fields->get_settings($field['field_id']);
-
-    if ($field_settings['field_content_type'] === 'numeric' || $field_settings['field_content_type'] === 'decimal')
+    if (is_null($this->entries_matrix_rows))
     {
-      return floatval($field_data);
+      $query = ee()->db->where_in('entry_id', $this->entries_entry_ids)
+                       ->order_by('row_order')
+                       ->get('matrix_data');
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_matrix_rows[$row['entry_id']]))
+        {
+          $this->entries_matrix_rows[$row['entry_id']] = array();
+        }
+
+        if ( ! isset($this->entries_matrix_rows[$row['entry_id']][$row['field_id']]))
+        {
+          $this->entries_matrix_rows[$row['entry_id']][$row['field_id']] = array();
+        }
+
+        $this->entries_matrix_rows[$row['entry_id']][$row['field_id']][] = $row;
+      }
+
+      $query->free_result();
     }
 
-    if ($field_settings['field_content_type'] === 'integer')
+    if (is_null($this->entries_matrix_cols))
     {
-      return intval($field_data);
+      $query = ee()->db->get('matrix_cols');
+
+      foreach ($query->result_array() as $row)
+      {
+        $this->entries_matrix_cols[$row['col_id']] = $row;
+      }
+
+      $query->free_result();
     }
 
-    return $field_data;
+    $data = array();
+
+    if (isset($this->entries_matrix_rows[$entry_id][$field['field_id']]))
+    {
+      $field_settings = unserialize(base64_decode($field['field_settings']));
+
+      foreach ($this->entries_matrix_rows[$entry_id][$field['field_id']] as $matrix_row)
+      {
+        $row = array('row_id' => (int) $matrix_row['row_id']);
+
+        foreach ($field_settings['col_ids'] as $col_id)
+        {
+          if (isset($this->entries_matrix_cols[$col_id]))
+          {
+            $row[$this->entries_matrix_cols[$col_id]['col_name']] = $matrix_row['col_id_'.$col_id];
+          }
+        }
+
+        $data[] = $row;
+      }
+    }
+
+    return $data;
   }
 
-  protected function entries_custom_field($entry_id, $field, $field_data, $entry, $tagdata = ' ')
+
+  protected function entries_playa($in_fluid, $entry_id, $field, $field_data)
+  {
+    if (is_null($this->entries_playa_data))
+    {
+      $query = ee()->db->select('parent_entry_id, child_entry_id, parent_field_id')
+                       ->where_in('parent_entry_id', $this->entries_entry_ids)
+                       ->order_by('rel_order', 'asc')
+                       ->get('playa_relationships');
+
+      foreach ($query->result_array() as $row)
+      {
+        if ( ! isset($this->entries_playa_data[$row['parent_entry_id']]))
+        {
+          $this->entries_playa_data[$row['parent_entry_id']] = array();
+        }
+
+        if ( ! isset($this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']]))
+        {
+          $this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']] = array();
+        }
+
+        $this->entries_playa_data[$row['parent_entry_id']][$row['parent_field_id']][] = (int) $row['child_entry_id'];
+      }
+
+      $query->free_result();
+    }
+
+    if (isset($this->entries_playa_data[$entry_id][$field['field_id']]))
+    {
+      return $this->entries_playa_data[$entry_id][$field['field_id']];
+    }
+
+    return array();
+  }
+
+
+  protected function entries_wygwam($in_fluid, $entry_id, $field, $field_data, $entry)
+  {
+    return $this->entries_custom_field($in_fluid, $entry_id, $field, $field_data, $entry);
+  }
+
+
+  protected function entries_custom_field($in_fluid, $entry_id, $field, $field_data, $entry, $tagdata = ' ')
   {
     ee()->load->add_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']], FALSE);
 
@@ -775,79 +982,6 @@ class Json
     }
 
     ee()->load->remove_package_path(ee()->api_channel_fields->ft_paths[$field['field_type']]);
-
-    return $field_data;
-  }
-
-  protected function entries_wygwam($entry_id, $field, $field_data, $entry) {
-    return $this->entries_custom_field($entry_id, $field, $field_data, $entry);
-  }
-
-  protected function entries_assets($entry_id, $field, $field_data, $entry)
-  {
-    $field_data = $this->entries_custom_field($entry_id, $field, $field_data, $entry);
-
-    if ( ! is_array($field_data))
-    {
-      $field_data = array();
-    }
-
-    if (isset($field_data['absolute_total_files']) && $field_data['absolute_total_files'] === 0)
-    {
-      return array();
-    }
-
-    $fields = array(
-      'file_id',
-      'url',
-      'subfolder',
-      'filename',
-      'extension',
-      'date_modified',
-      'kind',
-      'width',
-      'height',
-      'size',
-      'title',
-      'date',
-      'alt_text',
-      'caption',
-      'author',
-      'desc',
-      'location',
-    );
-
-    foreach ($field_data as &$row)
-    {
-      $source_type = $row['source_type'];
-      $filedir_id = $row['filedir_id'];
-      // excise any other fields from this row
-      $row = array_intersect_key($row, array_flip($fields));
-      $row['file_id'] = (int) $row['file_id'];
-      $row['date'] = $this->date_format($row['date']);
-      $row['date_modified'] = $this->date_format($row['date_modified']);
-
-      $row['manipulations'] = array();
-
-      if ($source_type === 'ee')
-      {
-        if ( ! isset($this->image_manipulations[$filedir_id]))
-        {
-          ee()->load->model('file_model');
-
-          $query = ee()->file_model->get_dimensions_by_dir_id($filedir_id);
-
-          $this->image_manipulations[$filedir_id] = $query->result();
-
-          $query->free_result();
-        }
-
-        foreach ($this->image_manipulations[$filedir_id] as $manipulation)
-        {
-          $row['manipulations'][$manipulation->short_name] = pathinfo($row['url'], PATHINFO_DIRNAME).'/_'.$manipulation->short_name.'/'.basename($row['url']);
-        }
-      }
-    }
 
     return $field_data;
   }
@@ -996,17 +1130,10 @@ class Json
       'm.timezone',
     );
 
-    if (version_compare(APP_VER, '6.0.0', '>='))
+    if (version_compare(APP_VER, '6', '>='))
     {
       $default_fields[1] = "m.role_id";
     }
-
-    $query = ee()->db->select('m_field_id, m_field_name')
-                     ->get('member_fields');
-
-    $custom_fields = $query->result_array();
-
-    $query->free_result();
 
     $select = array();
 
@@ -1027,18 +1154,8 @@ class Json
       $select = $default_fields;
     }
 
-    foreach ($custom_fields as &$field)
-    {
-      if (empty($this->fields) || in_array($field['m_field_name'], $this->fields))
-      {
-        $select[] = 'mdf_'.$field['m_field_id'].'.m_field_id_'.$field['m_field_id'].' AS '.ee()->db->protect_identifiers($field['m_field_name']);
-      }
-    }
-
-    ee()->db->select(implode(', ', $select), FALSE)->from('members m');
-    foreach ($custom_fields as &$field) {
-      ee()->db->join('member_data_field_'.$field['m_field_id'].' mdf_'.$field['m_field_id'], 'mdf_'.$field['m_field_id'].'.member_id = m.member_id');
-    }
+		ee()->db->select(implode(', ', $select), FALSE)
+            ->from('members m');
 
     if ($member_ids = ee()->TMPL->fetch_param('member_id'))
     {
@@ -1051,7 +1168,7 @@ class Json
     }
     else if (ee()->TMPL->fetch_param('username'))
     {
-      ee()->db->where_in('m.member_id', explode('|', ee()->TMPL->fetch_param('member_id')));
+      ee()->db->where('m.username', ee()->TMPL->fetch_param('username'));
     }
 
     if (ee()->TMPL->fetch_param('group_id'))
@@ -1071,10 +1188,21 @@ class Json
     }
 
     $query = ee()->db->get();
-
     $members = $query->result_array();
-
     $query->free_result();
+
+    $query = ee()->db->select('m_field_id, m_field_name, m_legacy_field_data')
+                     ->get('member_fields');
+    $custom_fields = $query->result_array();
+    $query->free_result();
+
+    foreach ($members as &$member)
+    {
+      foreach ($custom_fields as &$field)
+      {
+        $member[$field['m_field_name']] = call_user_func(array($this, 'members_custom_fields'), $field['m_field_id'], $member['member_id'], $field['m_legacy_field_data']);
+      }
+    }
 
     $date_fields = array(
       'join_date',
@@ -1084,6 +1212,16 @@ class Json
       'last_comment_date',
       'last_forum_post_date'
     );
+
+    $query = ee()->db->select('m_field_name')->where('m_field_type', 'date')
+                     ->get('member_fields');
+    $custom_date_fields = $query->result_array();
+    $query->free_result();
+
+    foreach($custom_date_fields AS &$custom_date_field)
+    {
+      $date_fields[] = $custom_date_field['m_field_name'];
+    }
 
     foreach ($members as &$member)
     {
@@ -1096,9 +1234,32 @@ class Json
       }
     }
 
-
     return $this->respond($members);
   }
+
+
+  protected function members_custom_fields($field_id, $member_id, $is_legacy_data)
+  {
+    $which_table = $is_legacy_data === 'y' ? 'member_data' : 'member_data_field_'.$field_id;
+
+    if ( ee()->db->select('m_field_id_'.$field_id)->where('member_id', $member_id)->get($which_table)->num_rows() > 0 )
+    {
+      $query = ee()->db->select('m_field_id_'.$field_id)
+                       ->where('member_id', $member_id)
+                       ->get($which_table);
+
+      $m_field_data = $query->result_array();
+      $query->free_result();
+
+      foreach ( $m_field_data AS $m_field_datum )
+      {
+        return $m_field_datum['m_field_id_'.$field_id];
+      }
+    }
+
+    return NULL;
+  }
+
 
   protected function initialize($which = NULL)
   {
@@ -1110,9 +1271,6 @@ class Json
         $this->entries_entry_ids = array();
         $this->entries_custom_fields = array();
         $this->entries_matrix_rows = NULL;
-        $this->entries_rel_data = NULL;
-        $this->entries_relationship_data = NULL;
-        $this->entries_grid_relationship_data = NULL;
         $this->entries_playa_data = NULL;
         $this->entries_channel_files_data = NULL;
         break;
@@ -1121,6 +1279,8 @@ class Json
     $this->xhr = ee()->TMPL->fetch_param('xhr') === 'yes';
 
     $this->terminate = ee()->TMPL->fetch_param('terminate') === 'yes';
+
+    $this->json_pretty_print = ee()->TMPL->fetch_param('json_pretty_print') === 'yes';
 
     $this->fields = (ee()->TMPL->fetch_param('fields')) ? explode('|', ee()->TMPL->fetch_param('fields')) : array();
 
@@ -1142,10 +1302,12 @@ class Json
     $this->content_type = ee()->TMPL->fetch_param('content_type', ($this->jsonp && $this->callback) ? 'application/javascript' : 'application/json');
   }
 
+
   protected function check_xhr_required()
   {
     return $this->xhr && ! ee()->input->is_ajax_request();
   }
+
 
   protected function date_format($date)
   {
@@ -1156,6 +1318,7 @@ class Json
 
     return ($this->date_format) ? date($this->date_format, $date) : $date * 1000;
   }
+
 
   protected function respond(array $response, $callback = NULL)
   {
@@ -1178,10 +1341,9 @@ class Json
       $response = array($root_node => $response);
     }
 
-    $response = function_exists('json_encode')
-      ? json_encode($response,JSON_PRETTY_PRINT)
-      // ? json_encode($response)
-      : ee()->javascript->generate_json($response, TRUE);
+    $response = $this->json_pretty_print
+    ? json_encode($response,JSON_PRETTY_PRINT)
+    : json_encode($response);
 
     if ( ! is_null($callback))
     {

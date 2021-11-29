@@ -7,7 +7,7 @@
 
 ## Warnings
 
-***Not tested with Assets, Matrix and Playa fieldtypes!***
+***Not tested with Assets, Matrix, Playa and Channel Files fieldtypes!***
 
 I don't own Assets, Matrix and Playa modules, so if you use Assets, Matrix or Playa fields I recommend to verify whether changes to the code are required and to test this plugin on a local or development server before using it on a production/live server.
 Since this plugin only outputs data I don't expect any damage but I will not accept any liability for any problems risen from using this plugin.
@@ -16,10 +16,6 @@ Since this plugin only outputs data I don't expect any damage but I will not acc
 
 Since EE4 it is possible to use custom fields outside of field groups as well as inside field groups. This plugin will not work when a new custom field is assigned as a standalone custom field as well as a grouped custom field within the same channel. You need to choose to use either a grouped custom field or a standalone custom field. This is because newly created custom fields get their own table in the database.
 Since legacy custom fields do not have their own table they will work fine either way.
-
-***Fluid fieldtype***
-
-Fluid fieldtype is not supported.
 
 ## Installation
 
@@ -161,7 +157,8 @@ status
 entry_date
 edit_date
 expiration_date
-Plus all of the custom fields associated with that channel
+
+Plus all of the custom fields associated with that channel.
 ```
 
 #### json:entries Parameters
@@ -180,23 +177,54 @@ When paired with show_categories="yes", this will display only categories from t
 
 Most custom fields will just return the raw column data from the `exp_channel_data` database table. The following fieldtypes will provide custom data. You *must* specify the `channel` parameter to get custom fields.
 
-##### Matrix
+##### Date
 
-The data will include an array of Matrix rows, including the row_id and the column names:
+The data will be the Unix timestamp, accurate to milliseconds. This is because the native JavaScript Date object accepts a millisecond-based timestamp in its constructor. Date can be formatted with using the `date_format=` parameter as mentioned above.
 
 ```
-your_matrix_field: [
-  {
-    row_id: 1,
-    my_col_name: "foo",
-    other_col_name: "bar"
-  },
-  {
-    row_id: 2,
-    my_col_name: "baz",
-    other_col_name: "qux"
-  }
-]
+your_date_field: 1385661660000
+```
+
+##### Fluid
+
+The data will include an array of custom fields ordered by Fluid field order.
+When a custom field is duplicated, the data will be returned in an array. In the case of duplicated *grid and relationships fields the data will be added to the existing array of that field:
+
+```
+"your_fluid_field": {
+	"your_custom_field": "Your Fluid Custom Field Contents",
+	"legacy_duplicated_custom_field": [
+		"Your Duplicated Fluid Custom Field Contents 1 (first instance)",
+		"Your Duplicated Fluid Custom Field Contents 2 (second instance)"
+	],
+	"your_grid_field": [
+		{
+			"row_id": 1,
+			"your_grid_column": "Your Fluid Grid Column Contents",
+			"your_second_grid_column": "Your Second Fluid Grid Column Contents",
+		}
+	],
+	"your_relationships_field": [
+		{
+			"channel_id": 2,
+			"channel_name": "channel-2",
+			"entry_id": 3,
+			"title": "Channel 2, Entry 2 (first instance)",
+			"url_title": "channel-2-entry-2",
+			"author_id": 1,
+			"username": "Site Admin"
+		},
+		{
+			"channel_id": 2,
+			"channel_name": "channel-2",
+			"entry_id": 3,
+			"title": "Channel 2, Entry 3 (second instance)",
+			"url_title": "channel-2-entry-3",
+			"author_id": 1,
+			"username": "Site Admin"
+		}
+	]
+}
 ```
 
 ##### Grid
@@ -204,37 +232,39 @@ your_matrix_field: [
 The data will include an array of Grid rows, including the row_id and the column names:
 
 ```
-your_grid_field: [
-  {
-    row_id: 1,
-    my_col_name: "foo",
-    other_col_name: "bar"
-  },
-  {
-    row_id: 2,
-    my_col_name: "baz",
-    other_col_name: "qux"
-  }
+"your_grid_field": [
+	{
+		"row_id": 1,
+		"my_col_name": "foo",
+		"other_col_name": "bar"
+	},
+	{
+		"row_id": 2,
+		"my_col_name": "baz",
+		"other_col_name": "qux"
+	}
 ]
 ```
 
 ##### Relationships
 
-The data will include an array of related entry IDs:
+The data will include an array of related data, including channel id, channel name, entry id, title, URL title, author id and username:
 
 ```
-your_relationships_field: [1, 2]
+"your_relationships_field": [
+	{
+		"channel_id": 1,
+		"channel_name": "your_channel_name",
+		"entry_id": 1,
+		"title": "Your Entry Title",
+		"url_title": "your-entry-title",
+		"author_id": 1,
+		"username": "Your author's username"
+	}
+]
 ```
 
-##### Playa
-
-The data will include an array of related entry IDs:
-
-```
-your_playa_field: [1, 2]
-```
-
-##### Assets
+##### Assets (not tested with JSON v2+)
 
 ```
 your_assets_field: [
@@ -289,7 +319,7 @@ your_assets_field: [
 
 *NOTE: image manipulation urls are only available to Assets files store locally, not on Amazon S3 or Google Storage.*
 
-##### Channel Files
+##### Channel Files (not tested with JSON v2+)
 
 ```
 your_channel_files_field: [
@@ -334,12 +364,31 @@ your_channel_files_field: [
 ]
 ```
 
-##### Date
+##### Matrix (not tested with JSON v2+)
 
-The data will be the Unix timestamp, accurate to milliseconds. This is because the native JavaScript Date object accepts a millisecond-based timestamp in its constructor.
+The data will include an array of Matrix rows, including the row_id and the column names:
 
 ```
-your_date_field: 1385661660000
+your_matrix_field: [
+  {
+    row_id: 1,
+    my_col_name: "foo",
+    other_col_name: "bar"
+  },
+  {
+    row_id: 2,
+    my_col_name: "baz",
+    other_col_name: "qux"
+  }
+]
+```
+
+##### Playa (not tested with JSON v2+)
+
+The data will include an array of related entry IDs:
+
+```
+your_playa_field: [1, 2]
 ```
 
 ## json:search
@@ -391,24 +440,59 @@ jQuery(document).ready(function($){
 
 json:members is a single tag, not a tag pair.
 
-#### json:members Parameters
+### json:members Default Fields
+
+```
+member_id
+group_id (role_id as of EE6+)
+username
+screen_name
+email
+signature
+avatar_filename
+avatar_width
+avatar_height
+photo_filename
+photo_width
+photo_height
+join_date
+last_visit
+last_activity
+last_entry_date
+last_comment_date
+last_forum_post_date
+total_entries
+total_comments
+total_forum_topics
+total_forum_posts
+language
+timezone
+
+Plus all of the custom fields associated with that member.
+```
+
+### json:members Parameters
 
 ##### `member_id="1"`
 
-Specify which members, by member_id, to output. Separate multiple member_id's with a pipe character. Use `member_id="CURRENT_USER"` to get member data for just the current user.
+Specify which members, by member_id, to output. Separate multiple member_id's with a pipe (`|`) character.
+Use `member_id="CURRENT_USER"` to get member data for just the current user.
 
 ##### `username="admin"`
 
-Specify which members, by username, to output. Separate multiple usernames with a pipe character.
+Specify which members, by username, to output. Separate multiple usernames with a pipe (`|`) character.
 
 ##### `group_id="1"`
 
-Specify which members, by group_id, to output. Separate multiple group_id's
+Specify which members, by group_id, to output. Separate multiple group_id's with a pipe (`|`) character
 
 ##### `limit="1"`
 
 Set a limit for records to retrieve.
 
+##### `offset="1"`
+
+Set an offset for records to retrieve. Has to be used in conjunction with the `limit=` parameter
 
 ## Advanced Examples
 
@@ -456,12 +540,27 @@ function yourCallbackFunction(data) {
 
 ## Changelog
 
+### v2.6.0
+
+- Added Fluid fieldtype support
+- Extended the data returned by relationships. It now includes channel id, channel name, entry id, entry title, entry url_title, entry author id and entry username.
+- Removed duplicate lines of code in the `entries_grid_relationship` function
+- Removed caching in the `entries_relationship` and `entries_grid_relationship` functions. It interfered with relationships fields embedded inside [File_]Grid and Fluid fields.
+- Changed `PATH_MOD` to `PATH_ADDONS`. PATH_MOD still works, but is basically deprecated since it changed to PATH_ADDONS in EE3
+- Simplified the `members` functions
+- Bugfix: where the `username` parameter didn't work
+- Updated README
+
+### v.2.5.2
+
+- Bugfix: Updated the `members` function to handle both legacy (pre EE4) and newer member data
+- Added `json_pretty_print` parameter for better readable output. Handy in the development stage
+- Updated README
+
 ### v2.5.1
 
 - Bugfix: Removed all remnants of fluid field data, since the Fluid fieldtype is not (yet) supported. The remnant data is unusable at this point. Working on support for Fluid fieldtype
-- Bugfix: Updated the `members` function to fit EE6.x
 - Changed `addon.setup.php` and cleaned it up
-- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
 
 ### v2.5.0
 
@@ -470,7 +569,6 @@ function yourCallbackFunction(data) {
 - Added support for File Grid fieldtype
 - Added support for legacy custom fields and data (EE2 and EE3 custom fields and data) for compatibility with upgraded versions of EE4+
 - Added `/system/user/addons/json/icon.png` for the EE6 control panel
-- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
 
 ### v1.1.9
 
@@ -478,7 +576,7 @@ function yourCallbackFunction(data) {
 - Added relationships support for grids as per [ahebrank's](https://github.com/ahebrank) [commit](https://github.com/rsanchez/json/pull/65)
 - Added `/system/user/addons/json/addon.setup.php` for EE3
 - Added `/system/user/addons/json/README.md` for the add-on manual in the control panel (as of EE3)
-- **Note:** not tested with Assets, Matrix and Playa
+- **Note:** not tested with Assets, Matrix, Playa and Channel Files fieldtypes/modules
 
 ## Attribution
 

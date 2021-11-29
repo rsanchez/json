@@ -12,12 +12,12 @@
  *
  */
 return array(
-	'author'         => 'Zignature',
-	'author_url'     => 'https://github.com/zignature',
-	'description'    => 'Output ExpressionEngine channel entries in JSON format.',
-	'docs_url'       => 'https://github.com/zignature/json',
-	'name'           => 'JSON',
-	'settings_exist' => FALSE,
-	'version'        => '2.5.1',
-	'namespace'      => 'zignature/json'
+	'author'			=> 'Zignature',
+	'author_url'		=> 'https://github.com/zignature',
+	'description'		=> 'Output ExpressionEngine channel entries in JSON format.',
+	'docs_url'			=> 'https://github.com/zignature/json',
+	'name'				=> 'JSON',
+	'settings_exist'	=> FALSE,
+	'version'			=> '2.6.0',
+	'namespace'			=> 'zignature\json'
 );
