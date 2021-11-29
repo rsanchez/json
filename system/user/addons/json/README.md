@@ -1,4 +1,4 @@
-# JSON v2.6.0#
+# JSON v2.6.0 #
 
 ## Requirements
 
