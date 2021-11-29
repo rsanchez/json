@@ -193,7 +193,7 @@ When a custom field is duplicated, the data will be returned in an array. In the
 ```
 "your_fluid_field": {
 	"your_custom_field": "Your Fluid Custom Field Contents",
-	"legacy_duplicated_custom_field": [
+	"your_duplicated_custom_field": [
 		"Your Duplicated Fluid Custom Field Contents 1 (first instance)",
 		"Your Duplicated Fluid Custom Field Contents 2 (second instance)"
 	],
